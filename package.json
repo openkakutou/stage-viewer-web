@@ -1,0 +1,26 @@
+{
+  "name": "stage-viewer-web",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Static web viewer for OpenKakutou MUGEN/Ikemen GO stage (background) files — layers, BG elements, parallax, and animated backgrounds.",
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "biome check --write ."
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
+    "@types/node": "^22.20.1",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.7.3",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
+  }
+}
