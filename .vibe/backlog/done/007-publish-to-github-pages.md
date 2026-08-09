@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 ---
 # Publish to GitHub Pages
 
