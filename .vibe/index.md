@@ -3,23 +3,30 @@
 # stage-viewer-web — Codebase index
 
 ## Modules
-- [`modules/app.md`](modules/app.md) — application entry point, builds the app's `web-ui-kit` root frame (toolbar + empty main content) and mounts it into the DOM
+- [`modules/app.md`](modules/app.md) — application entry point, builds the app's `web-ui-kit` root frame (toolbar + the stage file input as main content) and mounts it into the DOM
+- [`modules/input.md`](modules/input.md) — the stage folder input: gathers files from a folder selection/drag-and-drop, picks the `.def` candidate, loads it via the WASM bridge, and resolves its referenced sprite sheet from the same folder by basename; also renders the folder-picker/drag-and-drop UI
 - [`modules/wasm.md`](modules/wasm.md) — bridge to the `stage` WASM module: loads it client-side and exposes a typed `loadStage` wrapper, plus the `StageData` TypeScript vocabulary, each returning a typed result instead of throwing
 - [`modules/scripts.md`](modules/scripts.md) — dev-tooling scripts, e.g. downloading the `stage` WASM release build
 
 ## Observed patterns
-- The DOM-building logic of a screen/component is a pure exported function (`renderApp(root, version)`) taking its target element and data as parameters, kept separate from the module-level bootstrap — same "inject external effects for testability" shape as the WASM bridge and download script, applied here to DOM construction instead of `fetch`
+- The DOM-building logic of a screen/component is a pure exported function (`renderApp(root, version, options?)`, `renderStageFileInput(root, options)`) taking its target element and data/callbacks as parameters, kept separate from the module-level bootstrap — same "inject external effects for testability" shape as the WASM bridge and download script, applied here to DOM construction instead of `fetch`
 - Any app-level visual value (typography hierarchy, spacing) is expressed only through `@openkakutou/web-ui-kit`'s `--wuik-*` CSS custom properties, never a literal px/hex value
 - TypeScript with `strict`, `noUnusedLocals`, `noUnusedParameters` enabled (`tsconfig.json`)
 - Explicit `.ts` extensions on relative imports (`allowImportingTsExtensions`)
 - Test files co-located with source as `*.test.ts`/`*.test.mjs`, using Vitest + jsdom
 - Dev-tooling scripts outside the app bundle live in `scripts/` as plain `.mjs` (not bundled/type-checked by `tsc`, whose `include` is scoped to `src/`)
-- CLI-style scripts return an exit code from a testable `main(argv, overrides)` function rather than calling `process.exit` directly, and inject external effects (`fetch`, output dir) as parameters for testability — the same shape reappears in `src/wasm/bridge.ts` (`fetchWasmExecSource`/`fetchWasmBytes`)
+- CLI-style scripts return an exit code from a testable `main(argv, overrides)` function rather than calling `process.exit` directly, and inject external effects (`fetch`, output dir) as parameters for testability — the same shape reappears in `src/wasm/bridge.ts` (`fetchWasmExecSource`/`fetchWasmBytes`) and `src/input/stage-file-input.ts` (`readFileBytes`/`loadStage`)
 - `wasm_exec.js` (a plain global-side-effect script, not an ES module) is executed via `new Function(source)()` rather than a `<script>` tag or dynamic `import()`, so the same loading code works identically in a real browser and under jsdom/Node
 - A WHATWG `URL` object is never constructed from `import.meta.url` when the result feeds a Node `fs` call — jsdom's global `URL` is a different realm from Node's own, and `fs`'s functions reject a cross-realm `URL` instance even with a correct `file:` href; `fileURLToPath(import.meta.url)` (given the string form) sidesteps this
 - A field whose Go source is a nil-by-default slice is typed as `T[] | null` in TypeScript, not `T[]` — matches `encoding/json`'s actual nil-slice-marshals-to-`null` behavior instead of assuming an empty array
+- A referenced filename that a real-world text format writes inconsistently (directory prefix, separator style, letter case) is resolved by basename, exact match first, case-insensitive fallback second, rather than a byte-for-byte string comparison — backed by real-corpus evidence from a sibling repo (`character`'s own `.vibe/backlog/done/050-...case-sensitively.md`), not assumed; more than one match is reported as ambiguous rather than silently picked
+- File bytes are read via `FileReader` rather than `Blob#arrayBuffer()` — this project's pinned jsdom doesn't implement the latter, the same real-browser/jsdom parity reason every OpenKakutou app's file input uses `FileReader` instead
+- Non-standard browser APIs jsdom doesn't implement at all (`FileSystemEntry`, `DataTransferItem.webkitGetAsEntry()`) are modeled as minimal `*Like` interfaces (only the members actually used) so the drag-and-drop walk logic is unit-testable against plain mock objects, with the real browser behavior confirmed separately via real-browser verification
+- Clicking a radio input in a test is read via a `"click"` listener, not `"change"` — this project's pinned jsdom doesn't reliably synthesize `"change"` after a dispatched `"click"`
 - Fixture-driven tests that exercise the real WASM module pin expected values obtained by running the actual module once against the fixture (not derived from the same mapping code under test), copying a minimal `.def` fixture from the `stage` repo's own test data into `src/wasm/testdata/` rather than depending on a sibling checkout at test time
+- Real-browser verification of a file-input feature drives an actual `<input webkitdirectory>` selection against a real folder on disk (Playwright's `setInputFiles` accepts a directory path directly) rather than only simulated `FileList`/entry mocks
 
 ## Other context files
 - [`models.md`](models.md) — data models
 - [`glossary.md`](glossary.md) — ubiquitous language
+- [`decisions/`](decisions/) — architectural decision records

@@ -11,7 +11,8 @@ library — this repo never reimplements `.def` parsing itself.
 
 ```mermaid
 flowchart LR
-    app["app\n(src/main.ts)"] --> wasm["wasm\n(src/wasm/)"]
+    app["app\n(src/main.ts)"] --> input["input\n(src/input/)"]
+    input --> wasm["wasm\n(src/wasm/)"]
     wasm -.->|fetch + WebAssembly.instantiate| module["stage.wasm\n(public/wasm/, gitignored)"]
     scripts["scripts\n(scripts/download-wasm.mjs)"] -.->|fetches at dev-setup time| module
 
@@ -20,11 +21,20 @@ flowchart LR
 
 - **`app`** (`src/main.ts`, `src/version.ts`, `src/style.css`) — the entry
   point. Builds the root layout: the org's shared `@openkakutou/web-ui-kit`
-  app shell, a toolbar (app title + version) plus an empty main content
-  region, ready for the file input and viewer screens that later backlog
-  items add. No sidebar/tabs slotted yet — `<wuik-app-shell>` collapses
-  empty named slots to zero size with no reserved gutter, so this isn't
-  broken-looking chrome.
+  app shell (a toolbar plus a main content region), and mounts the `input`
+  module's view into the main content. No sidebar/tabs slotted yet —
+  `<wuik-app-shell>` collapses empty named slots to zero size with no
+  reserved gutter, so this isn't broken-looking chrome.
+- **`input`** (`src/input/`) — the stage folder input (backlog item 002).
+  `folder-entries.ts` gathers files from a folder selection or a
+  drag-and-drop, from either browser entry point, flattening any nested
+  subfolders. `stage-file-input.ts` picks which gathered file is the
+  stage's own `.def` (auto if there's exactly one, otherwise the caller
+  must ask the user), reads and loads it through `wasm`, then resolves the
+  `.def`'s referenced sprite sheet from that same folder listing by
+  filename — see "Sprite sheet resolution" below.
+  `stage-file-input-view.ts` renders the folder-picker + drag-and-drop UI
+  and the multi-candidate/error/success states on top of that logic.
 - **`wasm`** (`src/wasm/`) — the bridge to the `stage` WebAssembly module.
   `bridge.ts` loads `wasm_exec.js` and instantiates `stage.wasm`
   client-side (both fetched from `public/wasm/`, gitignored — see
@@ -33,8 +43,7 @@ flowchart LR
   read-only, so `OpenKakutouStage.save` (the module's write path, used by
   `stage-editor`) is never called here. `types.ts` is the TypeScript
   mirror of the module's JSON contract (`StageData` and its nested
-  shapes) — pure data types, no parsing logic. Nothing in `app` calls
-  `loadStage` yet; that lands with the file input (backlog item 002).
+  shapes) — pure data types, no parsing logic.
 - **`scripts`** (`scripts/download-wasm.mjs`) — dev-only tooling, not part
   of the shipped app bundle. Fetches a pinned `stage` release's
   `stage.wasm` + `wasm_exec.js` into `public/wasm/` so contributors don't
@@ -51,15 +60,38 @@ and under the test suite's jsdom environment — the same loading strategy
 `character-viewer-web`'s own bridge uses (see that repo's
 `.vibe/decisions/002-wasm-bridge-loading-and-result-shape.md`).
 
-## Data flow: loading a stage (once the file input lands)
+## Sprite sheet resolution
 
-1. `loadStage` is called with a stage `.def` file's raw bytes.
-2. On first call, the bridge fetches and instantiates `stage.wasm` (memoized
-   — later calls skip straight to step 3).
-3. The bytes are handed to the WebAssembly module's `OpenKakutouStage.load`,
-   which returns a `{ stage, error }` JSON result — never throws, even on
-   malformed input.
-4. `loadStage` parses that into a typed `StageResult`: `{ ok: true, stage }`
-   or `{ ok: false, error }`. A stage with no BG elements comes back with
-   `elements: null` (not `[]`) — a nil Go slice marshals to JSON `null`,
-   which `StageData`'s own type reflects rather than hiding.
+A stage's `.def` references its sprite sheet by a path string
+(`stage.bgDef.spriteFile`) that real-world files write inconsistently —
+bare filename, relative path, backslash separators, and sometimes a
+different letter case than the file actually has on disk. `input`
+resolves it by basename only (any directory prefix/separator stripped),
+trying an exact match against the gathered folder listing first, then a
+case-insensitive fallback — see
+`.vibe/decisions/001-sprite-sheet-resolved-by-basename-with-case-insensitive-fallback.md`
+for the full reasoning and the real-corpus evidence (`character`'s own
+`.vibe/backlog/done/050-...case-sensitively.md`) backing the fallback.
+More than one file matching the resolved name is reported as ambiguous
+rather than silently picking one.
+
+## Data flow: loading a stage
+
+1. The user picks or drops a folder onto `input`'s view.
+2. `input` gathers every file in it (recursing into subfolders), then
+   picks the `.def` candidate — automatically if there's exactly one,
+   otherwise the view prompts the user to choose among them.
+3. The chosen `.def`'s bytes are read and handed to `wasm.loadStage`,
+   which calls the WebAssembly module's `OpenKakutouStage.load` and parses
+   its `{ stage, error }` JSON result into a typed `StageResult`. A stage
+   with no BG elements comes back with `elements: null` (not `[]`) — a nil
+   Go slice marshals to JSON `null`, which `StageData`'s own type reflects
+   rather than hiding.
+4. Once the stage loads, `input` resolves its referenced sprite sheet from
+   the same gathered folder listing (see "Sprite sheet resolution" above)
+   and reads its bytes too.
+5. `input`'s view reports success (stage + sprite sheet bytes) or a
+   specific, named failure (which file, and why) back to the caller —
+   never a thrown exception at any layer. No screen actually renders what
+   was loaded yet; that lands with the characteristics panel and the other
+   viewer screens (backlog items 003+).

@@ -9,3 +9,68 @@
   font-size: var(--wuik-font-size-lg);
   font-weight: var(--wuik-font-weight-bold);
 }
+
+/*
+ * Stage file input (backlog item 002). Mirrors `lifebar-viewer-web`'s own
+ * folder-input styling — same dropzone/status/reset shape, only the
+ * class prefix differs.
+ */
+
+.stage-file-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wuik-space-4);
+  padding: var(--wuik-space-4);
+}
+
+.stage-file-input__dropzone {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--wuik-space-2);
+  padding: var(--wuik-space-4);
+  border: 2px dashed var(--wuik-color-border);
+  border-radius: var(--wuik-space-2);
+}
+
+.stage-file-input__dropzone--dragging {
+  border-color: var(--wuik-color-accent);
+  background-color: var(--wuik-color-surface);
+}
+
+.stage-file-input__dropzone--loading {
+  opacity: 0.6;
+}
+
+.stage-file-input__label {
+  font-weight: var(--wuik-font-weight-medium);
+}
+
+.stage-file-input__hint {
+  margin: 0;
+  font-size: var(--wuik-font-size-sm);
+  color: var(--wuik-color-text-secondary);
+}
+
+.stage-file-input__selection {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--wuik-space-2);
+}
+
+.stage-file-input__status {
+  min-height: 1.2em;
+  font-size: var(--wuik-font-size-sm);
+  color: var(--wuik-color-text-secondary);
+}
+
+.stage-file-input__status--error {
+  padding-left: var(--wuik-space-2);
+  color: var(--wuik-color-text);
+  border-left: 3px solid var(--wuik-color-danger);
+}
+
+.stage-file-input__reset {
+  align-self: flex-start;
+}

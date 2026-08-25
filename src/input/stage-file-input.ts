@@ -1,0 +1,273 @@
+import { loadStage as defaultLoadStage } from "../wasm/bridge.ts";
+import type { WasmBridgeOptions } from "../wasm/bridge.ts";
+// Combines candidate detection (which gathered file is the stage's own
+// `.def`) with reading it and loading it through the WASM bridge, then
+// resolving the sprite sheet it references from the same already-gathered
+// folder listing — see backlog item 002 and
+// .vibe/decisions/001-sprite-sheet-resolved-by-basename-with-case-insensitive-fallback.md
+// for the resolution rules. Mirrors `lifebar-viewer-web`'s own
+// `lifebar-folder-input.ts` shape (candidate resolution → read → parse),
+// extended with this item's own stricter, named-error sprite-sheet
+// resolution instead of that sibling's silent-if-unresolved one.
+import type { StageData } from "../wasm/types.ts";
+import type { GatheredFile } from "./folder-entries.ts";
+
+export type CandidateResolution =
+  | { status: "no-files" }
+  | { status: "no-candidate" }
+  | { status: "success"; entry: GatheredFile }
+  | { status: "needs-selection"; candidates: GatheredFile[] };
+
+function isCandidateDefFile(gathered: GatheredFile): boolean {
+  return gathered.file.name.toLowerCase().endsWith(".def");
+}
+
+/**
+ * Decides what to do with the files gathered from a folder selection: none
+ * gathered at all, none matching the `.def` heuristic, exactly one match
+ * (auto-load), or several (the caller must ask the user to pick one).
+ */
+export function resolveCandidates(
+  files: readonly GatheredFile[],
+): CandidateResolution {
+  if (files.length === 0) {
+    return { status: "no-files" };
+  }
+  const candidates = files.filter(isCandidateDefFile);
+  if (candidates.length === 0) {
+    return { status: "no-candidate" };
+  }
+  if (candidates.length === 1) {
+    return { status: "success", entry: candidates[0] };
+  }
+  return { status: "needs-selection", candidates };
+}
+
+/** The last path segment of a `.def`-referenced path, forward or backslash separated. */
+function referencedBasename(referencedPath: string): string {
+  const normalized = referencedPath.replace(/\\/g, "/");
+  const segments = normalized.split("/");
+  return segments[segments.length - 1];
+}
+
+export type SpriteSheetResolution =
+  | { status: "no-reference" }
+  | { status: "success"; entry: GatheredFile }
+  | { status: "not-found"; referencedName: string }
+  | {
+      status: "ambiguous";
+      referencedName: string;
+      candidates: GatheredFile[];
+    };
+
+/**
+ * Resolves the stage's referenced sprite sheet from the already-gathered
+ * folder listing, by basename — exact match first, case-insensitive
+ * fallback second (real MUGEN/Ikemen `.def` files routinely reference a
+ * different case than the file actually has on disk; see the ADR
+ * referenced above). More than one match at either level is reported as
+ * ambiguous rather than silently picking one.
+ */
+export function resolveSpriteSheet(
+  referencedSpriteFile: string,
+  files: readonly GatheredFile[],
+): SpriteSheetResolution {
+  if (referencedSpriteFile.trim() === "") {
+    return { status: "no-reference" };
+  }
+
+  const targetBasename = referencedBasename(referencedSpriteFile);
+
+  const exact = files.filter((f) => f.file.name === targetBasename);
+  if (exact.length === 1) return { status: "success", entry: exact[0] };
+  if (exact.length > 1) {
+    return {
+      status: "ambiguous",
+      referencedName: referencedSpriteFile,
+      candidates: exact,
+    };
+  }
+
+  const targetLower = targetBasename.toLowerCase();
+  const caseInsensitive = files.filter(
+    (f) => f.file.name.toLowerCase() === targetLower,
+  );
+  if (caseInsensitive.length === 1) {
+    return { status: "success", entry: caseInsensitive[0] };
+  }
+  if (caseInsensitive.length > 1) {
+    return {
+      status: "ambiguous",
+      referencedName: referencedSpriteFile,
+      candidates: caseInsensitive,
+    };
+  }
+
+  return { status: "not-found", referencedName: referencedSpriteFile };
+}
+
+export type StageFolderInputResult =
+  | {
+      status: "success";
+      fileName: string;
+      relativePath: string;
+      stage: StageData;
+      defBytes: Uint8Array;
+      sffFileName: string;
+      sffRelativePath: string;
+      sffBytes: Uint8Array;
+    }
+  | { status: "no-files" }
+  | { status: "no-candidate" }
+  | { status: "needs-selection"; candidates: GatheredFile[] }
+  | { status: "read-error"; fileName: string; message: string }
+  | { status: "parse-error"; fileName: string; message: string }
+  | { status: "sprite-not-found"; fileName: string; referencedName: string }
+  | {
+      status: "sprite-ambiguous";
+      fileName: string;
+      referencedName: string;
+      candidates: GatheredFile[];
+    }
+  | {
+      status: "sprite-read-error";
+      fileName: string;
+      sffFileName: string;
+      message: string;
+    };
+
+/**
+ * Reads a File's bytes via `FileReader` rather than `Blob#arrayBuffer()` —
+ * the pinned jsdom version's `Blob` implementation is incomplete, the same
+ * real-browser/jsdom parity reason every other OpenKakutou app's file
+ * input uses `FileReader` instead.
+ */
+export function readFileAsBytes(file: File): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (result instanceof ArrayBuffer) {
+        resolve(new Uint8Array(result));
+      } else {
+        reject(new Error("FileReader did not return an ArrayBuffer"));
+      }
+    };
+    reader.onerror = () => {
+      reject(reader.error ?? new Error("failed to read file"));
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+export interface StageFolderInputOptions {
+  /** Reads a File's bytes. Defaults to `readFileAsBytes`; injectable for testing. */
+  readFileBytes?: (file: File) => Promise<Uint8Array>;
+  /** Loads a stage via the WASM bridge. Defaults to the real bridge; injectable for testing. */
+  loadStage?: (
+    defBytes: Uint8Array,
+    options?: WasmBridgeOptions,
+  ) => ReturnType<typeof defaultLoadStage>;
+  /** Forwarded to the default loadStage; ignored if loadStage is overridden. */
+  bridgeOptions?: WasmBridgeOptions;
+}
+
+/**
+ * Reads and parses a single already-chosen `.def` candidate, then resolves
+ * and reads its referenced sprite sheet from `files` (the same folder
+ * listing the candidate itself came from).
+ */
+export async function loadStageFromChosenEntry(
+  entry: GatheredFile,
+  files: readonly GatheredFile[],
+  options: StageFolderInputOptions = {},
+): Promise<StageFolderInputResult> {
+  const readFileBytes = options.readFileBytes ?? readFileAsBytes;
+  const loadStage = options.loadStage ?? defaultLoadStage;
+  const fileName = entry.file.name;
+
+  let defBytes: Uint8Array;
+  try {
+    defBytes = await readFileBytes(entry.file);
+  } catch (err) {
+    return {
+      status: "read-error",
+      fileName,
+      message: err instanceof Error ? err.message : String(err),
+    };
+  }
+
+  const loaded = await loadStage(defBytes, options.bridgeOptions);
+  if (!loaded.ok) {
+    return { status: "parse-error", fileName, message: loaded.error };
+  }
+  const stage = loaded.stage;
+
+  const spriteResolution = resolveSpriteSheet(stage.bgDef.spriteFile, files);
+  if (spriteResolution.status === "not-found") {
+    return {
+      status: "sprite-not-found",
+      fileName,
+      referencedName: spriteResolution.referencedName,
+    };
+  }
+  if (spriteResolution.status === "ambiguous") {
+    return {
+      status: "sprite-ambiguous",
+      fileName,
+      referencedName: spriteResolution.referencedName,
+      candidates: spriteResolution.candidates,
+    };
+  }
+  if (spriteResolution.status === "no-reference") {
+    // A stage with no [BGDef] "spr" key at all — not a resolution failure,
+    // nothing was actually referenced to find. Acceptance criteria only
+    // require a named error for a reference that can't be resolved.
+    return {
+      status: "sprite-not-found",
+      fileName,
+      referencedName: "",
+    };
+  }
+
+  const sffEntry = spriteResolution.entry;
+  let sffBytes: Uint8Array;
+  try {
+    sffBytes = await readFileBytes(sffEntry.file);
+  } catch (err) {
+    return {
+      status: "sprite-read-error",
+      fileName,
+      sffFileName: sffEntry.file.name,
+      message: err instanceof Error ? err.message : String(err),
+    };
+  }
+
+  return {
+    status: "success",
+    fileName,
+    relativePath: entry.relativePath,
+    stage,
+    defBytes,
+    sffFileName: sffEntry.file.name,
+    sffRelativePath: sffEntry.relativePath,
+    sffBytes,
+  };
+}
+
+/**
+ * Resolves which candidate `.def` to use among the files gathered from a
+ * folder selection, then — only once a single candidate is settled —
+ * reads, parses, and resolves its sprite sheet. `no-files`/`no-candidate`/
+ * `needs-selection` short-circuit without reading anything.
+ */
+export async function loadStageFromFolderFiles(
+  files: readonly GatheredFile[],
+  options: StageFolderInputOptions = {},
+): Promise<StageFolderInputResult> {
+  const resolution = resolveCandidates(files);
+  if (resolution.status !== "success") {
+    return resolution;
+  }
+  return loadStageFromChosenEntry(resolution.entry, files, options);
+}

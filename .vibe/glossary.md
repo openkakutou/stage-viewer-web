@@ -22,3 +22,7 @@ _Sources: `src/wasm/types.ts`_
 Where characters may move within a stage: an x-axis range always, plus a z-axis (depth) range for a model-based stage. Distinct from Camera Bounds, which clamps the camera's own position instead.
 **Do not confuse with:** Camera Bounds.
 _Sources: `src/wasm/types.ts`_
+
+## Sprite Sheet
+The image file (`.sff`) a stage references for the sprites its BG Elements draw from. A stage's own `.def` only ever stores a path *reference* to its sprite sheet — the actual file is a separate one, resolved from the same folder the `.def` came from.
+_Sources: `src/wasm/types.ts`, `src/input/stage-file-input.ts`_

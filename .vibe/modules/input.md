@@ -1,0 +1,5 @@
+# Module: input
+**Role:** The stage folder input — gathers files from a folder selection or drag-and-drop, picks the `.def` candidate (auto or user-selected), loads it through the WASM bridge, and resolves its referenced sprite sheet from the same folder by basename; also renders the folder-picker + drag-and-drop UI on top of that logic.
+**Files:** `src/input/folder-entries.ts`, `src/input/stage-file-input.ts`, `src/input/stage-file-input-view.ts`
+**Exports:** `filesFromWebkitDirectoryFiles(files): GatheredFile[]`, `filesFromDataTransferItems(items): Promise<GatheredFile[]>`, `collectFilesFromEntry(entry): Promise<GatheredFile[]>`, `GatheredFile`, `resolveCandidates(files): CandidateResolution`, `resolveSpriteSheet(referencedSpriteFile, files): SpriteSheetResolution`, `loadStageFromFolderFiles(files, options?): Promise<StageFolderInputResult>`, `loadStageFromChosenEntry(entry, files, options?): Promise<StageFolderInputResult>`, `readFileAsBytes(file): Promise<Uint8Array>`, `StageFolderInputOptions`, `StageFolderInputResult`, `renderStageFileInput(root, options): void`
+**Depends on:** `modules/wasm.md`

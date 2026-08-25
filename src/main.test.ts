@@ -19,6 +19,14 @@ describe("renderApp", () => {
     expect(main).not.toBeNull();
   });
 
+  it("renders the stage file input inside the main content area", () => {
+    const root = document.createElement("div");
+
+    renderApp(root, "0.1.0");
+
+    expect(root.querySelector('input[type="file"]')).not.toBeNull();
+  });
+
   it("does not slot anything into the sidebar region", () => {
     const root = document.createElement("div");
 
