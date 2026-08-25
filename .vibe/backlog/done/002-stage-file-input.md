@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 depends_on: [001]
 ---
 # Stage File Input
