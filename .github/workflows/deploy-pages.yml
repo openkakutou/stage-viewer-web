@@ -30,16 +30,23 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Must run before Test: the WASM bridge test suite loads
+      # public/wasm/wasm_exec.js directly, the same way the app itself
+      # does at runtime — see src/wasm/bridge.test.ts.
+      #
+      # Pinned to an exact stage release. Bumped as a follow-up step of
+      # stage's own /vibe:release, per roadmap's
+      # .vibe/decisions/016-wasm-version-pinning-push-based-propagation.md
+      # — see this repo's own CLAUDE.md ("WASM dependency on stage") for
+      # where that pin lives. Mirrors character-viewer-web's equivalent step.
+      - name: Download stage WASM release
+        run: npm run wasm:download -- v0.7.0
+
       - name: Test
         run: npm test
 
       - name: Lint
         run: npx biome check .
-
-      # TODO(backlog item 007): once this repo has its own `wasm:download`
-      # script (blocked on `stage` publishing a WASM release — see item
-      # 001), add a step here, mirroring character-viewer-web's equivalent
-      # step. Until then this deploys whatever the app currently is.
 
       - name: Build
         run: npm run build
