@@ -1,5 +1,5 @@
 ---
-status: todo
+status: in_progress
 ---
 # Adopt `web-ui-kit` + WASM Bridge
 

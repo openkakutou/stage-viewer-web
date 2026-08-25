@@ -1,0 +1,11 @@
+/*
+ * App-level typography hierarchy for the root frame. Every value is a
+ * `web-ui-kit` design token — nothing hardcoded — so this stays correct
+ * across both themes with no maintenance here (see backlog item 001,
+ * mirroring character-viewer-web's own equivalent style sheet).
+ */
+
+.app-title {
+  font-size: var(--wuik-font-size-lg);
+  font-weight: var(--wuik-font-weight-bold);
+}

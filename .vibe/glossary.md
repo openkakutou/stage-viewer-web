@@ -1,3 +1,24 @@
 # Ubiquitous Language
 
-No domain terms yet — the codebase is at scaffold stage and defines no domain concepts of its own. Terms (stage, BG element, layer, parallax, camera bounds, …) will be derived from the code as the WASM bridge and viewer features land.
+## Stage
+A MUGEN/Ikemen GO background: its sprite sheet, coordinate space, camera settings, BG elements/layers, and (for a model-based stage) 3D model/scaling/player-depth settings. Read from a `.def` file via the `stage` WASM module; this app is read-only, so a `Stage` is only ever loaded here, never edited or saved.
+_Sources: `src/wasm/types.ts`, `src/wasm/bridge.ts`_
+
+## BG Element
+A single layer of a stage's background — a static sprite, a depth-scrolling (parallax) layer, or an `.air`-animated layer. Each has a draw order relative to characters (in front or behind), a starting position, and tiling settings.
+_Sources: `src/wasm/types.ts`_
+
+## Parallax
+A BG Element's scrolling behavior that simulates depth: it scrolls at a different ratio than the camera's own movement, so elements at different depths appear to move at different speeds.
+**Do not confuse with:** BG Element, which parallax is one behavior (`type`) of.
+_Sources: `src/wasm/types.ts`_
+
+## Camera Bounds
+The box a stage's camera can scroll within — its own left/right/high/low limits, distinct from where characters themselves may move (see Stage Boundaries).
+**Do not confuse with:** Stage Boundaries.
+_Sources: `src/wasm/types.ts`_
+
+## Stage Boundaries
+Where characters may move within a stage: an x-axis range always, plus a z-axis (depth) range for a model-based stage. Distinct from Camera Bounds, which clamps the camera's own position instead.
+**Do not confuse with:** Camera Bounds.
+_Sources: `src/wasm/types.ts`_
