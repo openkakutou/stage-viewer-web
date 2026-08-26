@@ -27,6 +27,26 @@ Run `npm run wasm:download` with no argument, or `-- --help`, to see usage and e
 
 There is no automatic retry on network failures — occasional/manual usage, not a hot CI path (same reasoning as `character-viewer-web`'s equivalent script).
 
+## Second WASM dependency: `sff`
+
+Drawing the background preview needs sprite metadata and pixel data
+`stage`'s own WASM module doesn't expose (see `docs/architecture.md`,
+"Background preview composition"). This app bridges `sff`'s own separate
+WASM module directly for that, fetched into its own subdirectory — never
+`public/wasm/`, to avoid colliding with `stage`'s own `wasm_exec.js` (see
+`.vibe/decisions/003-background-preview-composition-and-coordinate-mapping.md`):
+
+```sh
+npm run wasm:download:sff -- <version>
+# e.g.
+npm run wasm:download:sff -- v0.3.0
+```
+
+Implementation: `scripts/download-sff-wasm.mjs` — same shape, same exit
+codes, same all-or-nothing rollback as `download-wasm.mjs` above, just a
+different producer repo (`openkakutou/sff`) and output directory
+(`public/wasm/sff/`).
+
 ## Running tests
 
 `npm test` runs the full Vitest suite, including `scripts/download-wasm.test.mjs`, which exercises the download logic against an injected fake `fetch` — no real network access is needed to run the test suite.

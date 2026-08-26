@@ -137,3 +137,78 @@
   font-size: var(--wuik-font-size-sm);
   color: var(--wuik-color-text-secondary);
 }
+
+/*
+ * BG element browser + background preview (backlog item 004). Two-panel
+ * shape mirrors `character-viewer-web`'s own `sprite-browser` list+preview
+ * pairing (flex row, `gap: var(--wuik-space-4)`), widened for this
+ * screen's denser multi-property rows. The composed scene, not the list,
+ * is the primary subject here, so the viewport gets the remaining space
+ * (`flex: 1`) and keeps the stage's own aspect ratio (set inline, see
+ * background-preview.ts) rather than a fixed height.
+ */
+
+.background-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--wuik-space-4);
+  padding: var(--wuik-space-4);
+}
+
+.background-preview__empty {
+  margin: var(--wuik-space-4);
+  color: var(--wuik-color-text-secondary);
+}
+
+.background-preview__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wuik-space-2);
+}
+
+.background-preview__status {
+  min-height: 1.2em;
+  font-size: var(--wuik-font-size-sm);
+  color: var(--wuik-color-text-secondary);
+}
+
+.background-preview__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wuik-space-1);
+  min-width: 16em;
+  max-width: 22em;
+  max-height: 24em;
+  overflow-y: auto;
+}
+
+.background-preview__row {
+  padding: var(--wuik-space-2);
+  font-size: var(--wuik-font-size-sm);
+  text-align: left;
+  color: var(--wuik-color-text);
+  background: none;
+  border: 1px solid var(--wuik-color-border);
+  border-radius: var(--wuik-space-1);
+  cursor: pointer;
+}
+
+.background-preview__row[aria-current="true"] {
+  border-color: var(--wuik-color-accent);
+}
+
+.background-preview__viewport {
+  display: block;
+  flex: 1 1 20em;
+  width: 100%;
+  min-width: 16em;
+  background-color: var(--wuik-color-surface);
+  border: 1px solid var(--wuik-color-border);
+  border-radius: var(--wuik-space-2);
+}
+
+.background-preview__canvas {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}

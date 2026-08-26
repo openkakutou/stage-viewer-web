@@ -92,6 +92,53 @@ Each player's starting depth (Z) position (Ikemen GO extension).
 | p1..p8 | number | Starting Z position for players 1 through 8 |
 Defined in: `src/wasm/types.ts`
 
+## Sprite
+One sprite's metadata within a sprite sheet — position, size, palette reference. Never pixel data — that's `resolveSpritePixels`'s own separate `pixels` field.
+
+| Field | Type | Notes |
+|---|---|---|
+| group, image | number | Identify the sprite, same shape as `SpriteRef` |
+| width, height | number | Sprite dimensions in pixels |
+| axisX, axisY | number | The sprite's own drawing origin (pivot) offset |
+| palette | number | Which palette (of the sheet's shared palettes) this sprite uses |
+Defined in: `src/wasm/sff-types.ts`
+
+## SpriteGroup
+All sprites sharing the same group index, as `sff` groups them.
+
+| Field | Type | Notes |
+|---|---|---|
+| index | number | The group's own index |
+| sprites | Sprite[] | Every sprite in this group |
+Defined in: `src/wasm/sff-types.ts`
+
+## SpriteSheetResult
+Discriminated-union result of `loadSpriteSheet`: exactly one of `spriteGroups`/`error` is ever meaningful.
+
+| Variant | Fields |
+|---|---|
+| success | `ok: true`, `spriteGroups: SpriteGroup[]` |
+| failure | `ok: false`, `error: string` |
+Defined in: `src/wasm/sff-bridge.ts`
+
+## SpritePixelResult
+One decoded sprite's actual pixels, from `resolveSpritePixels` — one per request, in order, independently `ok`/error so one absent sprite in a batch doesn't fail the rest.
+
+| Variant | Fields |
+|---|---|
+| success | `ok: true`, `pixels: Uint8Array`, `width: number`, `height: number` |
+| failure | `ok: false`, `error: string` |
+Defined in: `src/wasm/sff-bridge.ts`
+
+## DrawCommand
+One instruction in a background preview's draw plan — either a decoded sprite or a placeholder tile, at a canvas position.
+
+| Variant | Fields |
+|---|---|
+| sprite | `elementIndex`, `x`, `y`, `width`, `height`, `pixels: Uint8Array` |
+| placeholder | `elementIndex`, `x`, `y`, `width`, `height` |
+Defined in: `src/viewer/background-composition.ts`
+
 ## StageResult
 Discriminated-union result of `loadStage`: exactly one of `stage`/`error` is ever meaningful.
 

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- After loading a stage, every configured background element/layer is now listed (name, type, position, layer) next to a live visual preview of the composed background, drawn in the correct front-to-back order. Selecting an element in the list highlights it in the preview. A background element referencing a sprite missing from the loaded sprite sheet shows a clear placeholder instead of breaking the preview, and a stage with no background elements shows an explicit message instead of a blank preview.
+
 ## [0.4.0] - 2026-08-26
 
 ### Added

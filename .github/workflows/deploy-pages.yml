@@ -42,6 +42,14 @@ jobs:
       - name: Download stage WASM release
         run: npm run wasm:download -- v0.8.0
 
+      # Separate WASM module, separate output subdirectory
+      # (public/wasm/sff/) — needed to decode a BG element's sprite for the
+      # background preview. Pinned independently of the stage release
+      # above; bumped as a follow-up of sff's own /vibe:release. See
+      # .vibe/decisions/003-background-preview-composition-and-coordinate-mapping.md.
+      - name: Download sff WASM release
+        run: npm run wasm:download:sff -- v0.3.0
+
       - name: Test
         run: npm test
 

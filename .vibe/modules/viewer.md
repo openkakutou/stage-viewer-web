@@ -1,5 +1,5 @@
 # Module: viewer
-**Role:** The screens that show what was loaded. Currently one screen: the characteristics panel, which displays the loaded stage's name, author, camera bounds, and stage boundaries.
-**Files:** `src/viewer/characteristics-panel.ts`
-**Exports:** `renderCharacteristicsPanel(root: HTMLElement, stage: StageData | null): void`
-**Depends on:** `modules/wasm.md`
+**Role:** The screens that show what was loaded. The characteristics panel displays the loaded stage's name, author, camera bounds, and stage boundaries. The BG element browser + background preview lists every configured BG element next to a composed canvas preview, drawn in layer order, with per-element selection highlighting and a placeholder for a sprite reference that doesn't resolve.
+**Files:** `src/viewer/characteristics-panel.ts`, `src/viewer/background-composition.ts`, `src/viewer/background-preview.ts`
+**Exports:** `renderCharacteristicsPanel(root: HTMLElement, stage: StageData | null): void`, `renderBackgroundPreview(root: HTMLElement, stage: StageData | null, sffBytes: Uint8Array | null, options?: BackgroundPreviewOptions): void`, `stageXToCanvasX`, `computeSpriteTopLeft`, `sortElementsForComposition`, `spriteRequestKey`, `collectSpriteRequests`, `buildDrawPlan`, `PLACEHOLDER_SIZE`, `defaultDrawComposition`
+**Depends on:** `modules/wasm.md`, `modules/sff-wasm.md`

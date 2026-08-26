@@ -15,10 +15,14 @@ flowchart LR
     app --> viewer["viewer\n(src/viewer/)"]
     input --> wasm["wasm\n(src/wasm/)"]
     input -.->|loaded stage| viewer
+    viewer --> wasm
     wasm -.->|fetch + WebAssembly.instantiate| module["stage.wasm\n(public/wasm/, gitignored)"]
-    scripts["scripts\n(scripts/download-wasm.mjs)"] -.->|fetches at dev-setup time| module
+    viewer -.->|fetch + WebAssembly.instantiate| sffModule["sff.wasm\n(public/wasm/sff/, gitignored)"]
+    scripts["scripts\n(download-wasm.mjs,\ndownload-sff-wasm.mjs)"] -.->|fetches at dev-setup time| module
+    scripts -.-> sffModule
 
     style module stroke-dasharray: 5 5
+    style sffModule stroke-dasharray: 5 5
 ```
 
 - **`app`** (`src/main.ts`, `src/version.ts`, `src/style.css`) — the entry
@@ -48,22 +52,32 @@ flowchart LR
   `stage-editor`) is never called here. `types.ts` is the TypeScript
   mirror of the module's JSON contract (`StageData` and its nested
   shapes) — pure data types, no parsing logic.
-- **`scripts`** (`scripts/download-wasm.mjs`) — dev-only tooling, not part
-  of the shipped app bundle. Fetches a pinned `stage` release's
-  `stage.wasm` + `wasm_exec.js` into `public/wasm/` so contributors don't
-  need a Go toolchain or a sibling `stage` checkout.
+- **`scripts`** (`scripts/download-wasm.mjs`, `download-sff-wasm.mjs`) —
+  dev-only tooling, not part of the shipped app bundle. The first fetches a
+  pinned `stage` release's `stage.wasm` + `wasm_exec.js` into
+  `public/wasm/`; the second, a separate script (not a shared
+  parameterized one), fetches a pinned `sff` release's own `sff.wasm` +
+  `wasm_exec.js` into `public/wasm/sff/` — a distinct subdirectory, so the
+  two `wasm_exec.js` files (each only guaranteed compatible with the Go
+  toolchain version that built the `.wasm` binary shipped next to it)
+  never collide.
 - **`viewer`** (`src/viewer/`) — the screens that show what was loaded.
-  `characteristics-panel.ts` (backlog item 003) is the first one: it
-  renders the loaded stage's name, author, camera bounds, and stage
-  boundaries. A missing name or author renders as the literal text
-  "Unknown" rather than a blank field. `topBound`/`bottomBound` are always
-  shown, alongside an explicit note on whether the stage is 2D or 3D,
-  derived from `bgDef.modelFile` being empty or not — never from the
-  boundary values themselves, since a 2D stage's zero bounds are a value
-  that happens to be zero, not evidence of dimensionality — see
+  `characteristics-panel.ts` (backlog item 003) renders the loaded stage's
+  name, author, camera bounds, and stage boundaries. A missing name or
+  author renders as the literal text "Unknown" rather than a blank field.
+  `topBound`/`bottomBound` are always shown, alongside an explicit note on
+  whether the stage is 2D or 3D, derived from `bgDef.modelFile` being
+  empty or not — see
   `.vibe/decisions/002-stage-boundaries-shown-unconditionally-with-dimension-note.md`.
-  It appears inline automatically once a stage loads, with no tab/sidebar
-  navigation yet, since it's still the only viewer screen.
+  `background-composition.ts` (backlog item 004) is pure composition
+  logic — coordinate mapping, draw order, sprite request collection, and
+  the draw plan itself — with no DOM/canvas/WASM involved, so it's fully
+  unit-testable on its own; see "Background preview composition" below.
+  `background-preview.ts` is the DOM/canvas orchestration on top of it: a
+  BG element list next to a composed canvas preview, wrapped in
+  `web-ui-kit`'s `<wuik-viewport>` for zoom/pan/reset-to-fit. Both screens
+  appear inline automatically once a stage loads, with no tab/sidebar
+  navigation yet.
 
 ## WebAssembly dependency
 
@@ -109,6 +123,31 @@ rather than silently picking one.
 5. `input`'s view reports success (stage + sprite sheet bytes) or a
    specific, named failure (which file, and why) back to the caller —
    never a thrown exception at any layer. On success, `app` renders the
-   `viewer` module's characteristics panel with the loaded stage. Other
-   viewer screens (a BG element/layer browser, a visual preview renderer)
-   land in later items.
+   characteristics panel and the BG element browser + background preview
+   with the loaded stage.
+
+## Background preview composition
+
+A stage's local coordinate space (`BGdef.localCoordWidth/Height`) has its
+origin at horizontal-center, top — derived from `stage`'s own documented
+`ZOffset` convention ("ground level's vertical distance from the top of
+the local coordinate space"). A BG element's sprite is drawn so its own
+axis (pivot) point lands exactly on the element's `(startX, startY)`
+position — the same pivot-relative-to-image-origin relationship the
+`character-viewer-web` animation player already uses for its own
+Clsn-box placement math, applied in the opposite direction here. Elements
+are composed back-to-front by a stable sort on `layerNo` (0 behind, 1 in
+front), preserving `.def` file order within a layer. See
+`.vibe/decisions/003-background-preview-composition-and-coordinate-mapping.md`
+for the full reasoning, including why an `"anim"` element (no static
+sprite reference — `.air`-driven playback isn't resolved by this item) is
+listed but never drawn, distinct from a `"normal"`/`"parallax"` element
+whose sprite reference doesn't exist in the sheet, which gets a
+placeholder tile instead.
+
+Sprite metadata (for axis/size, and to classify a reference valid or
+invalid) and pixel data are both fetched via `sff`'s own separate WASM
+module (see the diagram above) — `stage`'s own module has no
+sprite-metadata surface at all. A single batched `resolveSprites` call
+decodes every distinct sprite reference in the composition at once,
+rather than one call per element.
