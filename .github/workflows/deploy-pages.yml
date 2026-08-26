@@ -40,7 +40,7 @@ jobs:
       # — see this repo's own CLAUDE.md ("WASM dependency on stage") for
       # where that pin lives. Mirrors character-viewer-web's equivalent step.
       - name: Download stage WASM release
-        run: npm run wasm:download -- v0.7.0
+        run: npm run wasm:download -- v0.8.0
 
       - name: Test
         run: npm test

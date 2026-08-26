@@ -35,7 +35,7 @@ npm update
 Download a specific version of the `stage` library's WebAssembly build (needed to load a stage):
 
 ```sh
-npm run wasm:download -- v0.7.0
+npm run wasm:download -- v0.8.0
 ```
 <!-- vibe:end:install -->
 
