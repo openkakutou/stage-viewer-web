@@ -1,7 +1,7 @@
 {
   "name": "stage-viewer-web",
   "private": true,
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Static web viewer for OpenKakutou MUGEN/Ikemen GO stage (background) files — layers, BG elements, parallax, and animated backgrounds.",
   "type": "module",
   "engines": {

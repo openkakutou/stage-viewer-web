@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-27
+
 ### Added
 
 - After loading a stage, every configured background element/layer is now listed (name, type, position, layer) next to a live visual preview of the composed background, drawn in the correct front-to-back order. Selecting an element in the list highlights it in the preview. A background element referencing a sprite missing from the loaded sprite sheet shows a clear placeholder instead of breaking the preview, and a stage with no background elements shows an explicit message instead of a blank preview.
@@ -29,7 +31,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The app now uses the shared OpenKakutou design system for its layout and visual style, and can load a stage file (background, camera, and layer data) through the underlying stage library — the on-screen file loading and preview screens themselves come in later updates.
 
-[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/openkakutou/stage-viewer-web/releases/tag/v0.2.0
