@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-26
+
 ### Added
 
 - After loading a stage, its name, author, camera bounds, and stage boundaries are now shown right away, with a missing name or author displayed as "Unknown" instead of a blank field, and a clear note on whether the loaded stage is 2D or 3D.
@@ -23,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The app now uses the shared OpenKakutou design system for its layout and visual style, and can load a stage file (background, camera, and layer data) through the underlying stage library — the on-screen file loading and preview screens themselves come in later updates.
 
-[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/openkakutou/stage-viewer-web/releases/tag/v0.2.0
