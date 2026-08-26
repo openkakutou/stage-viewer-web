@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- After loading a stage, its name, author, camera bounds, and stage boundaries are now shown right away, with a missing name or author displayed as "Unknown" instead of a blank field, and a clear note on whether the loaded stage is 2D or 3D.
+
 ## [0.3.0] - 2026-08-25
 
 ### Added

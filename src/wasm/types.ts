@@ -106,6 +106,10 @@ export interface PlayerStartZ {
 
 /** The full stage graph returned by `OpenKakutouStage.load`. */
 export interface StageData {
+  /** `[Info]` `name` — empty string when the stage's `.def` doesn't set it. */
+  name: string;
+  /** `[Info]` `author` — empty string when the stage's `.def` doesn't set it. */
+  author: string;
   bgDef: BGdef;
   /**
    * `null` (not `[]`) when the stage has no BG elements — mirrors `stage`'s

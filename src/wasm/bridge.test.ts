@@ -69,6 +69,14 @@ describe("loadStage", () => {
     });
   });
 
+  it("maps the stage's name, and reports a missing author as an empty string", async () => {
+    const result = await loadStage(defBytes, testOptions);
+    if (!result.ok) throw new Error("expected ok result");
+
+    expect(result.stage.name).toBe("Training Room");
+    expect(result.stage.author).toBe("");
+  });
+
   it("maps camera bounds and stage boundaries to their typed shape", async () => {
     const result = await loadStage(defBytes, testOptions);
     if (!result.ok) throw new Error("expected ok result");

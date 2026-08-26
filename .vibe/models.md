@@ -5,6 +5,8 @@ The full stage graph returned by `loadStage`. Mirrors the `stage` Go library's J
 
 | Field | Type | Notes |
 |---|---|---|
+| name | string | `[Info]` `name` — empty string when the stage's `.def` doesn't set it |
+| author | string | `[Info]` `author` — empty string when the stage's `.def` doesn't set it |
 | bgDef | BGdef | Stage-level settings |
 | elements | BGElement[] \| null | `null` (not `[]`) when the stage has no BG elements — a nil Go slice marshals to JSON `null` |
 | cameraBounds | CameraBounds | The box the camera's own position is clamped to |

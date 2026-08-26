@@ -74,3 +74,66 @@
 .stage-file-input__reset {
   align-self: flex-start;
 }
+
+/*
+ * Characteristics panel (backlog item 003). Mirrors
+ * `character-viewer-web`'s own `.characteristics-panel*` block shape
+ * (panel/name/stat), with a `dl`-per-group layout for the two distinct
+ * bounds concepts instead of a single flat stat row.
+ */
+
+.characteristics-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wuik-space-4);
+  padding: var(--wuik-space-4);
+}
+
+.characteristics-panel__name {
+  margin: 0;
+  font-size: var(--wuik-font-size-xl);
+  font-weight: var(--wuik-font-weight-bold);
+}
+
+.characteristics-panel__author {
+  margin: 0;
+}
+
+.characteristics-panel__camera-bounds dl,
+.characteristics-panel__stage-boundaries dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--wuik-space-5);
+  margin: 0;
+}
+
+.characteristics-panel__camera-bounds h3,
+.characteristics-panel__stage-boundaries h3 {
+  margin: 0 0 var(--wuik-space-2);
+  font-size: var(--wuik-font-size-base);
+  font-weight: var(--wuik-font-weight-medium);
+}
+
+.characteristics-panel__stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wuik-space-1);
+}
+
+.characteristics-panel__stat dt {
+  margin: 0;
+  font-size: var(--wuik-font-size-sm);
+  color: var(--wuik-color-text-secondary);
+}
+
+.characteristics-panel__stat dd {
+  margin: 0;
+  font-size: var(--wuik-font-size-lg);
+  font-weight: var(--wuik-font-weight-medium);
+}
+
+.characteristics-panel__dimension {
+  margin: var(--wuik-space-2) 0 0;
+  font-size: var(--wuik-font-size-sm);
+  color: var(--wuik-color-text-secondary);
+}

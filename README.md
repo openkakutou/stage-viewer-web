@@ -3,11 +3,10 @@
 A static web page for visualizing an [OpenKakutou](https://github.com/openkakutou) (MUGEN/Ikemen GO-compatible) stage (background): layers, BG elements, parallax scroll, and animated backgrounds, so a stage's composition can be thoroughly inspected. It reads stage data (`.def`) via a WebAssembly module built from the sibling [`stage`](https://github.com/openkakutou/stage) Go library. Read-only.
 
 <!-- vibe:begin:features -->
-This project is in early-stage development. You can already load a stage by picking or dragging in the folder that contains its files — the app reads them, automatically finds the referenced background sprite sheet even in a subfolder or under a slightly different letter case, and clearly names which file is missing if it can't be found. The screens that actually show what was loaded are not built yet.
+This project is in early-stage development. You can already load a stage by picking or dragging in the folder that contains its files — the app reads them, automatically finds the referenced background sprite sheet even in a subfolder or under a slightly different letter case, and clearly names which file is missing if it can't be found. Once loaded, the stage's name, author, camera bounds, and stage boundaries are shown right away — a missing name or author is displayed as "Unknown" instead of a blank field, and the panel states plainly whether the stage is 2D or 3D.
 
 Planned:
 
-- A characteristics panel: stage name/author, camera bounds, and boundaries
 - A BG element/layer browser
 - A live visual preview renderer for the composed background
 - Animated BG playback preview: parallax scroll and animated background playback over time

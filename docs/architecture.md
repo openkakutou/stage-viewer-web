@@ -12,7 +12,9 @@ library — this repo never reimplements `.def` parsing itself.
 ```mermaid
 flowchart LR
     app["app\n(src/main.ts)"] --> input["input\n(src/input/)"]
+    app --> viewer["viewer\n(src/viewer/)"]
     input --> wasm["wasm\n(src/wasm/)"]
+    input -.->|loaded stage| viewer
     wasm -.->|fetch + WebAssembly.instantiate| module["stage.wasm\n(public/wasm/, gitignored)"]
     scripts["scripts\n(scripts/download-wasm.mjs)"] -.->|fetches at dev-setup time| module
 
@@ -21,8 +23,10 @@ flowchart LR
 
 - **`app`** (`src/main.ts`, `src/version.ts`, `src/style.css`) — the entry
   point. Builds the root layout: the org's shared `@openkakutou/web-ui-kit`
-  app shell (a toolbar plus a main content region), and mounts the `input`
-  module's view into the main content. No sidebar/tabs slotted yet —
+  app shell (a toolbar plus a main content region), mounts the `input`
+  module's view into the main content, and wires its `onLoaded` callback
+  to render the `viewer` module's characteristics panel into a container
+  appended right after it. No sidebar/tabs slotted yet —
   `<wuik-app-shell>` collapses empty named slots to zero size with no
   reserved gutter, so this isn't broken-looking chrome.
 - **`input`** (`src/input/`) — the stage folder input (backlog item 002).
@@ -48,6 +52,18 @@ flowchart LR
   of the shipped app bundle. Fetches a pinned `stage` release's
   `stage.wasm` + `wasm_exec.js` into `public/wasm/` so contributors don't
   need a Go toolchain or a sibling `stage` checkout.
+- **`viewer`** (`src/viewer/`) — the screens that show what was loaded.
+  `characteristics-panel.ts` (backlog item 003) is the first one: it
+  renders the loaded stage's name, author, camera bounds, and stage
+  boundaries. A missing name or author renders as the literal text
+  "Unknown" rather than a blank field. `topBound`/`bottomBound` are always
+  shown, alongside an explicit note on whether the stage is 2D or 3D,
+  derived from `bgDef.modelFile` being empty or not — never from the
+  boundary values themselves, since a 2D stage's zero bounds are a value
+  that happens to be zero, not evidence of dimensionality — see
+  `.vibe/decisions/002-stage-boundaries-shown-unconditionally-with-dimension-note.md`.
+  It appears inline automatically once a stage loads, with no tab/sidebar
+  navigation yet, since it's still the only viewer screen.
 
 ## WebAssembly dependency
 
@@ -92,6 +108,7 @@ rather than silently picking one.
    and reads its bytes too.
 5. `input`'s view reports success (stage + sprite sheet bytes) or a
    specific, named failure (which file, and why) back to the caller —
-   never a thrown exception at any layer. No screen actually renders what
-   was loaded yet; that lands with the characteristics panel and the other
-   viewer screens (backlog items 003+).
+   never a thrown exception at any layer. On success, `app` renders the
+   `viewer` module's characteristics panel with the loaded stage. Other
+   viewer screens (a BG element/layer browser, a visual preview renderer)
+   land in later items.

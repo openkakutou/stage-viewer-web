@@ -4,6 +4,7 @@ import "./style.css";
 import { renderStageFileInput } from "./input/stage-file-input-view.ts";
 import type { StageFolderInputOptions } from "./input/stage-file-input.ts";
 import { appVersion } from "./version.ts";
+import { renderCharacteristicsPanel } from "./viewer/characteristics-panel.ts";
 
 const APP_TITLE = "Stage Viewer";
 
@@ -14,11 +15,13 @@ export interface RenderAppOptions {
 
 /**
  * Builds the app's root frame — a `web-ui-kit` `<wuik-app-shell>` with the
- * app title (plus version) in the toolbar and the stage file input
- * (backlog item 002) as `<main>` content. Mirrors `character-viewer-web`'s
- * own scaffold adoption: no sidebar/tabs yet — `<wuik-app-shell>` collapses
- * empty named slots to zero size with no reserved gutter, so omitting them
- * renders nothing broken — deferred until a second real screen exists.
+ * app title (plus version) in the toolbar, the stage file input (backlog
+ * item 002), and the characteristics panel (backlog item 003) as `<main>`
+ * content, appearing automatically once a stage loads. Mirrors
+ * `character-viewer-web`'s own scaffold adoption: no sidebar/tabs yet —
+ * `<wuik-app-shell>` collapses empty named slots to zero size with no
+ * reserved gutter, so omitting them renders nothing broken — deferred
+ * until a screen needs its own navigation.
  * Default light theme only (no theme toggle), same as the sibling app.
  */
 export function renderApp(
@@ -40,13 +43,14 @@ export function renderApp(
   shell.appendChild(toolbar);
 
   const main = document.createElement("main");
+  const characteristicsContainer = document.createElement("div");
   renderStageFileInput(main, {
-    // No consumer exists yet for a loaded stage — the characteristics
-    // panel and other viewer screens (backlog items 003+) are what
-    // actually renders it. This item's own job stops at loading.
-    onLoaded: () => {},
+    onLoaded: (result) => {
+      renderCharacteristicsPanel(characteristicsContainer, result.stage);
+    },
     bridgeOptions: options.bridgeOptions,
   });
+  main.appendChild(characteristicsContainer);
   shell.appendChild(main);
 
   root.appendChild(shell);
