@@ -1,5 +1,5 @@
 ---
-status: blocked
+status: todo
 depends_on: [004]
 ---
 # Animated BG Playback Preview
@@ -14,11 +14,12 @@ Extend the background preview renderer (item 004) with time-based playback: para
 - [ ] A BG element with malformed/out-of-range animation data (e.g. a frame index beyond the sprite sheet) falls back to a clear error indicator for that element instead of stalling or crashing the whole playback loop
 
 ## Notes
-Cross-repo blocker, found during implementation (not previously flagged here): animated-frame cycling (AC2/AC4) needs real resolved `.air`-driven frame data for a `BGElementAnim`'s `ActionNumber`, and `stage` cannot currently produce or expose it for a real file, for two separate reasons —
-1. ~~`stage`'s own `Parse` doesn't read `[Begin Action N]` blocks yet~~ — **resolved**: `stage#009` shipped in `stage` `v0.9.0`, this repo's own WASM pin is already bumped to it (`.github/workflows/deploy-pages.yml`).
-2. `stage`'s WASM entrypoint (`cmd/wasm/main.go`) still has no exposed way to surface `BGAnimation`/`ResolveAnimationFrame` data through `OpenKakutouStage.load`'s JSON result at all — `BGElement` only exposes the raw `actionNumber`, nothing maps it to frame data. Tracked as `stage#011`, still `todo`.
+Cross-repo blocker, found during implementation (not previously flagged here): animated-frame cycling (AC2/AC4) needs real resolved `.air`-driven frame data for a `BGElementAnim`'s `ActionNumber`, and `stage` could not previously produce or expose it for a real file, for two separate reasons — both now resolved:
+1. ~~`stage`'s own `Parse` doesn't read `[Begin Action N]` blocks yet~~ — **resolved**: `stage#009` shipped in `stage` `v0.9.0`.
+2. ~~`stage`'s WASM entrypoint (`cmd/wasm/main.go`) has no exposed way to surface `BGAnimation`/`ResolveAnimationFrame` data~~ — **resolved**: `stage#011` shipped `OpenKakutouStage.resolveAnimationFrames` in `stage` `v0.10.0`. This repo's own WASM pin is bumped to it (`.github/workflows/deploy-pages.yml`).
 
-Parallax playback (AC1/AC3) has no such blocker — `BGElement.deltaX`/`deltaY` are already exposed today. Per this skill's own "no split" rule in autonomous mode, this item isn't partially implemented; it stays `blocked` as a whole until `stage#011` is done too.
+Parallax playback (AC1/AC3) has no such blocker — `BGElement.deltaX`/`deltaY` are already exposed today. Both blockers being resolved, this item is unblocked and back in play.
 
-## Blocked
-2026-08-28: Depends on `stage#011` (not done) — `stage#009` resolved and published as `stage` `v0.9.0`. See Notes above.
+## Previously blocked
+2026-08-28: Depended on `stage#011` (not done at the time) — `stage#009` had already resolved and published as `stage` `v0.9.0`.
+2026-08-29: `stage#011` shipped and published as `stage` `v0.10.0` — unblocked, `status` returned to `todo`.
