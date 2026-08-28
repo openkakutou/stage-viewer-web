@@ -32,7 +32,7 @@ npm update
 Download a specific version of the `stage` library's WebAssembly build (needed to load a stage):
 
 ```sh
-npm run wasm:download -- v0.8.0
+npm run wasm:download -- v0.9.0
 ```
 
 Download a specific version of the `sff` library's WebAssembly build (needed to draw the background preview):
