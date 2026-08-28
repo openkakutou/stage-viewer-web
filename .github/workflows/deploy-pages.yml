@@ -40,7 +40,7 @@ jobs:
       # — see this repo's own CLAUDE.md ("WASM dependency on stage") for
       # where that pin lives. Mirrors character-viewer-web's equivalent step.
       - name: Download stage WASM release
-        run: npm run wasm:download -- v0.9.0
+        run: npm run wasm:download -- v0.10.0
 
       # Separate WASM module, separate output subdirectory
       # (public/wasm/sff/) — needed to decode a BG element's sprite for the
