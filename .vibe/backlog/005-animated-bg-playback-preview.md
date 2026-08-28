@@ -1,5 +1,5 @@
 ---
-status: todo
+status: blocked
 depends_on: [004]
 ---
 # Animated BG Playback Preview
@@ -14,4 +14,11 @@ Extend the background preview renderer (item 004) with time-based playback: para
 - [ ] A BG element with malformed/out-of-range animation data (e.g. a frame index beyond the sprite sheet) falls back to a clear error indicator for that element instead of stalling or crashing the whole playback loop
 
 ## Notes
-None.
+Cross-repo blocker, found during implementation (not previously flagged here): animated-frame cycling (AC2/AC4) needs real resolved `.air`-driven frame data for a `BGElementAnim`'s `ActionNumber`, and `stage` cannot currently produce or expose it for a real file, for two separate reasons —
+1. `stage`'s own `Parse` doesn't read `[Begin Action N]` blocks yet, so `BGAnimation`/`BGAnimFrame` (already modeled) are never populated from a real `.def` file — tracked as `stage`'s own backlog item `009` (still `todo`, needs `stage#005` which is already done).
+2. Even once `009` lands, `stage`'s WASM entrypoint (`cmd/wasm/main.go`) has no exposed way to surface `BGAnimation`/`ResolveAnimationFrame` data through `OpenKakutouStage.load`'s JSON result at all — `BGElement` only exposes the raw `actionNumber`, nothing maps it to frame data. No `stage` backlog item currently covers this WASM-exposure gap either.
+
+Parallax playback (AC1/AC3) has no such blocker — `BGElement.deltaX`/`deltaY` are already exposed today. Per this skill's own "no split" rule in autonomous mode, this item isn't partially implemented; it stays `blocked` as a whole until the `stage`-side gap above is closed (item `009` at minimum, plus a new `stage` item for the WASM exposure, not yet filed).
+
+## Blocked
+2026-08-28: Depends on `stage#009` (not done) and an unfiled `stage` WASM-exposure gap for `BGAnimation`/`ResolveAnimationFrame` — see Notes above.
