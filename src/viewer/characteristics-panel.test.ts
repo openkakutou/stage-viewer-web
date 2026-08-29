@@ -20,6 +20,7 @@ function stageWith(overrides: Partial<StageData> = {}): StageData {
       yShift: 0,
     },
     elements: null,
+    animations: null,
     cameraBounds: { left: -180, right: 180, high: -240, low: 0 },
     stageBoundaries: { left: -1000, right: 1000, topBound: 0, bottomBound: 0 },
     model: {

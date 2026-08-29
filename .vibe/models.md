@@ -9,6 +9,7 @@ The full stage graph returned by `loadStage`. Mirrors the `stage` Go library's J
 | author | string | `[Info]` `author` — empty string when the stage's `.def` doesn't set it |
 | bgDef | BGdef | Stage-level settings |
 | elements | BGElement[] \| null | `null` (not `[]`) when the stage has no BG elements — a nil Go slice marshals to JSON `null` |
+| animations | Record\<string, BGAnimation\> \| null | Every parsed `[Begin Action N]` block, keyed by action number as a string (Go's `map[int]BGAnimation` marshals int keys as JSON string keys); `null` when the stage defines none |
 | cameraBounds | CameraBounds | The box the camera's own position is clamped to |
 | stageBoundaries | StageBoundaries | Where characters may move |
 | model | Model | 3D model placement/lighting (Ikemen GO extension) |
@@ -49,6 +50,62 @@ Defined in: `src/wasm/types.ts`
 | group | number | Sprite sheet group index |
 | image | number | Sprite index within the group |
 Defined in: `src/wasm/types.ts`
+
+## BGAnimFrame
+One displayed frame within a `BGAnimation`.
+
+| Field | Type | Notes |
+|---|---|---|
+| sprite | SpriteRef | Which sprite to show while this frame is active |
+| time | number | How many ticks to hold this frame before advancing |
+Defined in: `src/wasm/types.ts`
+
+## BGAnimation
+One `[Begin Action N]` block — an animated BG element's frame sequence.
+
+| Field | Type | Notes |
+|---|---|---|
+| frames | BGAnimFrame[] | Ordered frame sequence |
+| loopStart | number | Index `frames` loops back to once played through once |
+Defined in: `src/wasm/types.ts`
+
+## AnimationFrameRequest
+One request to `resolveAnimationFrames`.
+
+| Field | Type | Notes |
+|---|---|---|
+| animation | BGAnimation \| null | `null` (no matching block, or none requested) resolves to the blank sentinel |
+| elapsedTicks | number | How far into playback this element currently is |
+Defined in: `src/wasm/bridge.ts`
+
+## ResolveAnimationFramesResult
+Discriminated-union result of `resolveAnimationFrames`: exactly one of `sprites`/`error` is ever meaningful.
+
+| Variant | Fields |
+|---|---|
+| success | `ok: true`, `sprites: SpriteRef[]` |
+| failure | `ok: false`, `error: string` |
+Defined in: `src/wasm/bridge.ts`
+
+## PlaybackState
+The animated background preview's playback clock — real-time-based, not tied to how many frames were actually rendered.
+
+| Field | Type | Notes |
+|---|---|---|
+| elapsedTicksExact | number | Total elapsed ticks since playback started, as a real number — floored only when sent to `resolveAnimationFrames` |
+| cameraX | number | The simulated camera's current horizontal position |
+Defined in: `src/viewer/background-composition.ts`
+
+## AnimationFrameStatus
+Which sprite an `"anim"` BG element should currently show, classified for both drawing and row-label purposes.
+
+| Variant | Fields |
+|---|---|
+| no-animation | (none) — the element's action number has no matching `BGAnimation` block |
+| blank | (none) — `stage`'s own "nothing to draw this frame" sentinel; not an error |
+| unresolved-sprite | `sprite: SpriteRef` — resolved, but absent from the sprite sheet |
+| resolved | `sprite: SpriteRef` — resolved and present in the sheet |
+Defined in: `src/viewer/background-composition.ts`
 
 ## CameraBounds
 | Field | Type | Notes |

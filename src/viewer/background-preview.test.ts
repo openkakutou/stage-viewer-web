@@ -3,7 +3,7 @@ import type {
   SpritePixelResult,
   SpriteSheetResult,
 } from "../wasm/sff-bridge.ts";
-import type { BGElement, StageData } from "../wasm/types.ts";
+import type { BGAnimation, BGElement, StageData } from "../wasm/types.ts";
 import { renderBackgroundPreview } from "./background-preview.ts";
 
 function element(overrides: Partial<BGElement> = {}): BGElement {
@@ -25,7 +25,10 @@ function element(overrides: Partial<BGElement> = {}): BGElement {
   };
 }
 
-function stageWith(elements: BGElement[] | null): StageData {
+function stageWith(
+  elements: BGElement[] | null,
+  animations: Record<string, BGAnimation> | null = null,
+): StageData {
   return {
     name: "Training Room",
     author: "",
@@ -43,6 +46,7 @@ function stageWith(elements: BGElement[] | null): StageData {
       yShift: 0,
     },
     elements,
+    animations,
     cameraBounds: { left: 0, right: 0, high: 0, low: 0 },
     stageBoundaries: { left: 0, right: 0, topBound: 0, bottomBound: 0 },
     model: {
@@ -185,7 +189,7 @@ describe("renderBackgroundPreview", () => {
     );
   });
 
-  it("marks an anim element distinctly, never as an invalid reference", async () => {
+  it("marks an anim element with no matching animation block distinctly, never as an invalid reference", async () => {
     const root = document.createElement("div");
     const stage = stageWith([
       element({ type: "anim", actionNumber: 5, name: "flash" }),
@@ -202,7 +206,182 @@ describe("renderBackgroundPreview", () => {
     const rowText =
       root.querySelector(".background-preview__row")?.textContent ?? "";
     expect(rowText).not.toMatch(/invalid/i);
-    expect(rowText).toMatch(/not rendered|animated/i);
+    expect(rowText).toMatch(/no matching animation/i);
+  });
+
+  it("shows no status label for an anim element that has a matching animation block", async () => {
+    const root = document.createElement("div");
+    const stage = stageWith(
+      [element({ type: "anim", actionNumber: 5, name: "flash" })],
+      {
+        "5": {
+          frames: [{ sprite: { group: 0, image: 0 }, time: 10 }],
+          loopStart: 0,
+        },
+      },
+    );
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+      resolveAnimationFrames: vi
+        .fn()
+        .mockResolvedValue({ ok: true, sprites: [{ group: 0, image: 0 }] }),
+    });
+    await vi.waitFor(() => {
+      expect(root.querySelector(".background-preview__row")).not.toBeNull();
+    });
+    await vi.waitFor(() => {
+      const rowText =
+        root.querySelector(".background-preview__row")?.textContent ?? "";
+      expect(rowText).not.toMatch(/no matching animation|invalid/i);
+    });
+  });
+
+  describe("playback controls", () => {
+    function fakeRaf() {
+      let queued: FrameRequestCallback | null = null;
+      const requestAnimationFrame = vi.fn((cb: FrameRequestCallback) => {
+        queued = cb;
+        return 1;
+      });
+      const cancelAnimationFrame = vi.fn(() => {
+        queued = null;
+      });
+      return {
+        requestAnimationFrame,
+        cancelAnimationFrame,
+        fire: (timestamp: number) => {
+          const cb = queued;
+          queued = null;
+          cb?.(timestamp);
+        },
+        isQueued: () => queued !== null,
+      };
+    }
+
+    function playButton(root: HTMLElement): HTMLElement {
+      const button = Array.from(root.querySelectorAll("wuik-button")).find(
+        (el) => el.textContent === "Play" || el.textContent === "Pause",
+      );
+      if (!button) throw new Error("play/pause button not found");
+      return button as HTMLElement;
+    }
+
+    async function renderAnimatedStage(raf: ReturnType<typeof fakeRaf>) {
+      const root = document.createElement("div");
+      const stage = stageWith(
+        [element({ type: "anim", actionNumber: 5, name: "flash" })],
+        {
+          "5": {
+            frames: [{ sprite: { group: 0, image: 0 }, time: 10 }],
+            loopStart: 0,
+          },
+        },
+      );
+      const resolveAnimationFrames = vi
+        .fn()
+        .mockResolvedValue({ ok: true, sprites: [{ group: 0, image: 0 }] });
+      const drawComposition = vi.fn();
+
+      renderBackgroundPreview(root, stage, new Uint8Array(), {
+        loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+        resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+        resolveAnimationFrames,
+        drawComposition,
+        requestAnimationFrame: raf.requestAnimationFrame,
+        cancelAnimationFrame: raf.cancelAnimationFrame,
+      });
+      await vi.waitFor(() => {
+        expect(root.querySelector(".background-preview__row")).not.toBeNull();
+      });
+
+      return { root, resolveAnimationFrames, drawComposition };
+    }
+
+    it("starts paused, with a Play control that switches to Pause once clicked", async () => {
+      const raf = fakeRaf();
+      const { root } = await renderAnimatedStage(raf);
+
+      expect(playButton(root).textContent).toBe("Play");
+      playButton(root).click();
+      expect(playButton(root).textContent).toBe("Pause");
+    });
+
+    it("issues one batched resolveAnimationFrames call per tick while playing", async () => {
+      const raf = fakeRaf();
+      const { root, resolveAnimationFrames } = await renderAnimatedStage(raf);
+      resolveAnimationFrames.mockClear();
+
+      playButton(root).click();
+      raf.fire(16);
+      await vi.waitFor(() => {
+        expect(resolveAnimationFrames).toHaveBeenCalledTimes(1);
+      });
+    });
+
+    it("stops issuing ticks once paused", async () => {
+      const raf = fakeRaf();
+      const { root, resolveAnimationFrames } = await renderAnimatedStage(raf);
+      resolveAnimationFrames.mockClear();
+
+      playButton(root).click();
+      raf.fire(16);
+      await vi.waitFor(() => {
+        expect(resolveAnimationFrames).toHaveBeenCalledTimes(1);
+      });
+      playButton(root).click(); // pause
+      expect(raf.isQueued()).toBe(false);
+
+      resolveAnimationFrames.mockClear();
+      raf.fire(32); // no-op: nothing was queued after pause
+      expect(resolveAnimationFrames).not.toHaveBeenCalled();
+    });
+
+    it("resumes from the same elapsed position instead of resetting to zero", async () => {
+      const raf = fakeRaf();
+      const { root, resolveAnimationFrames } = await renderAnimatedStage(raf);
+      resolveAnimationFrames.mockClear();
+
+      playButton(root).click();
+      raf.fire(16);
+      await vi.waitFor(() =>
+        expect(resolveAnimationFrames).toHaveBeenCalledTimes(1),
+      );
+      const firstElapsedTicks = resolveAnimationFrames.mock.calls[0]?.[0]?.[0]
+        ?.elapsedTicks as number;
+
+      playButton(root).click(); // pause
+      playButton(root).click(); // resume
+      resolveAnimationFrames.mockClear();
+      raf.fire(16); // first tick after resuming has no prior timestamp, so its own delta is 0 —
+      // elapsedTicks must still reflect everything accumulated before the pause, never reset to 0.
+      await vi.waitFor(() => {
+        expect(resolveAnimationFrames).toHaveBeenCalledTimes(1);
+      });
+      const resumedElapsedTicks = resolveAnimationFrames.mock.calls[0]?.[0]?.[0]
+        ?.elapsedTicks as number;
+
+      expect(resumedElapsedTicks).toBeGreaterThanOrEqual(firstElapsedTicks);
+    });
+
+    it("cancels a previous playback loop when the render function is called again on the same root", async () => {
+      const raf = fakeRaf();
+      const { root, resolveAnimationFrames } = await renderAnimatedStage(raf);
+      playButton(root).click();
+      expect(raf.isQueued()).toBe(true);
+
+      renderBackgroundPreview(root, stageWith([]), new Uint8Array(), {
+        requestAnimationFrame: raf.requestAnimationFrame,
+        cancelAnimationFrame: raf.cancelAnimationFrame,
+      });
+
+      expect(raf.cancelAnimationFrame).toHaveBeenCalled();
+      expect(raf.isQueued()).toBe(false);
+      resolveAnimationFrames.mockClear();
+      raf.fire(16);
+      expect(resolveAnimationFrames).not.toHaveBeenCalled();
+    });
   });
 
   it("sizes the canvas to the stage's own local coordinate space", async () => {

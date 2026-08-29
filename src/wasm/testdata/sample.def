@@ -31,3 +31,12 @@ type = parallax
 spriteno = 1,0
 delta = 0.5,0.8
 start = 10,20
+
+[BG torch]
+type = anim
+actionno = 200
+start = 50,30
+
+[Begin Action 200]
+0,0, 0,0, 10
+0,1, 0,0, 5

@@ -7,7 +7,12 @@
 // the rationale, and `stage`'s own `docs/wasm.md` for this module's JS
 // contract (`{ stage, error }`, only `load` — this app is read-only, so
 // `OpenKakutouStage.save` is never called here).
-import type { StageData, StageResult } from "./types.ts";
+import type {
+  BGAnimation,
+  SpriteRef,
+  StageData,
+  StageResult,
+} from "./types.ts";
 
 const DEFAULT_WASM_EXEC_URL = "./wasm/wasm_exec.js";
 const DEFAULT_WASM_BINARY_URL = "./wasm/stage.wasm";
@@ -24,9 +29,31 @@ interface RawLoadResult {
   error: string | null;
 }
 
+/** One `{ animation, elapsedTicks }` request to `OpenKakutouStage.resolveAnimationFrames`. */
+export interface AnimationFrameRequest {
+  /** `null` (no matching `[Begin Action N]` block, or none requested) resolves to the blank sentinel. */
+  animation: BGAnimation | null;
+  elapsedTicks: number;
+}
+
+/** The `{sprites, error}` shape returned synchronously by `OpenKakutouStage.resolveAnimationFrames`. */
+interface RawResolveAnimationFramesResult {
+  sprites: SpriteRef[] | null;
+  error: string | null;
+}
+
 interface OpenKakutouStageGlobal {
   load(defBytes: Uint8Array): RawLoadResult;
+  resolveAnimationFrames(requestsJSON: string): RawResolveAnimationFramesResult;
 }
+
+/**
+ * Result of the typed `resolveAnimationFrames` wrapper, mirroring
+ * `StageResult`'s own discriminated-union shape.
+ */
+export type ResolveAnimationFramesResult =
+  | { ok: true; sprites: SpriteRef[] }
+  | { ok: false; error: string };
 
 export interface WasmBridgeOptions {
   /** Fetches `wasm_exec.js`'s source text. Defaults to `fetch(DEFAULT_WASM_EXEC_URL)`. */
@@ -135,4 +162,36 @@ export async function loadStage(
 
   const stage = JSON.parse(raw.stage) as StageData;
   return { ok: true, stage };
+}
+
+/**
+ * Resolves, for one or more animated BG elements at once, which sprite
+ * each should currently show — one batched WASM call per rendered
+ * playback tick rather than one call per element (see `stage`'s own
+ * `docs/wasm.md`, "Resolving animation frames"). A request whose
+ * `animation` is `null`, empty, or otherwise degenerate resolves to the
+ * blank "nothing to draw" sentinel rather than an error for that entry.
+ */
+export async function resolveAnimationFrames(
+  requests: readonly AnimationFrameRequest[],
+  options: WasmBridgeOptions = {},
+): Promise<ResolveAnimationFramesResult> {
+  await ensureGoRuntimeReady(options);
+
+  const raw = getOpenKakutouStage().resolveAnimationFrames(
+    JSON.stringify(requests),
+  );
+
+  if (raw.error !== null) {
+    return { ok: false, error: raw.error };
+  }
+  if (raw.sprites === null) {
+    return {
+      ok: false,
+      error:
+        "OpenKakutouStage.resolveAnimationFrames returned neither sprites nor an error",
+    };
+  }
+
+  return { ok: true, sprites: raw.sprites };
 }

@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { loadStage, resetWasmBridgeForTests } from "./bridge.ts";
+import {
+  loadStage,
+  resetWasmBridgeForTests,
+  resolveAnimationFrames,
+} from "./bridge.ts";
 import type { WasmBridgeOptions } from "./bridge.ts";
 
 // The real WASM assets (public/wasm/, gitignored) are fetched via
@@ -44,7 +48,7 @@ describe("loadStage", () => {
 
     expect(result.stage.bgDef.spriteFile).toBe("stage0.sff");
     expect(result.stage.bgDef.zOffset).toBe(220);
-    expect(result.stage.elements).toHaveLength(2);
+    expect(result.stage.elements).toHaveLength(3);
   });
 
   it("maps every JSON field of a non-trivial BG element to its typed shape", async () => {
@@ -89,6 +93,25 @@ describe("loadStage", () => {
     });
     expect(result.stage.stageBoundaries.left).toBe(-1000);
     expect(result.stage.stageBoundaries.right).toBe(1000);
+  });
+
+  it("maps a parsed [Begin Action N] block to its typed animation shape, keyed by action number", async () => {
+    const result = await loadStage(defBytes, testOptions);
+    if (!result.ok) throw new Error("expected ok result");
+
+    const torch = result.stage.elements?.[2];
+    expect(torch).toMatchObject({
+      name: "torch",
+      type: "anim",
+      actionNumber: 200,
+    });
+    expect(result.stage.animations?.["200"]).toEqual({
+      frames: [
+        { sprite: { group: 0, image: 0 }, time: 10 },
+        { sprite: { group: 0, image: 1 }, time: 5 },
+      ],
+      loopStart: 0,
+    });
   });
 
   it("returns a typed error, not a thrown exception, for malformed .def bytes", async () => {
@@ -143,5 +166,76 @@ describe("loadStage", () => {
     await loadStage(defBytes, countingOptions);
 
     expect(fetchCount).toBe(1);
+  });
+});
+
+describe("resolveAnimationFrames", () => {
+  it("resolves the sprite each of several requests should show, in order, in a single batched call", async () => {
+    const result = await resolveAnimationFrames(
+      [
+        {
+          animation: {
+            frames: [
+              { sprite: { group: 0, image: 0 }, time: 10 },
+              { sprite: { group: 0, image: 1 }, time: 5 },
+            ],
+            loopStart: 0,
+          },
+          elapsedTicks: 0,
+        },
+        {
+          animation: {
+            frames: [
+              { sprite: { group: 0, image: 0 }, time: 10 },
+              { sprite: { group: 0, image: 1 }, time: 5 },
+            ],
+            loopStart: 0,
+          },
+          elapsedTicks: 12,
+        },
+      ],
+      testOptions,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok result");
+    expect(result.sprites).toEqual([
+      { group: 0, image: 0 },
+      { group: 0, image: 1 },
+    ]);
+  });
+
+  it("resolves a null animation (no matching block) to the blank sentinel instead of an error", async () => {
+    const result = await resolveAnimationFrames(
+      [{ animation: null, elapsedTicks: 0 }],
+      testOptions,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok result");
+    expect(result.sprites).toEqual([{ group: -1, image: -1 }]);
+  });
+
+  it("resolves an animation with no frames to the blank sentinel, not an error, without affecting other requests in the same call", async () => {
+    const result = await resolveAnimationFrames(
+      [
+        { animation: { frames: [], loopStart: 0 }, elapsedTicks: 0 },
+        {
+          animation: {
+            frames: [{ sprite: { group: 2, image: 2 }, time: 10 }],
+            loopStart: 0,
+          },
+          elapsedTicks: 0,
+        },
+      ],
+      testOptions,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok result");
+    expect(result.sprites).toEqual([
+      { group: -1, image: -1 },
+      { group: 2, image: 2 },
+    ]);
   });
 });

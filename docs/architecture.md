@@ -69,15 +69,17 @@ flowchart LR
   whether the stage is 2D or 3D, derived from `bgDef.modelFile` being
   empty or not — see
   `.vibe/decisions/002-stage-boundaries-shown-unconditionally-with-dimension-note.md`.
-  `background-composition.ts` (backlog item 004) is pure composition
-  logic — coordinate mapping, draw order, sprite request collection, and
-  the draw plan itself — with no DOM/canvas/WASM involved, so it's fully
-  unit-testable on its own; see "Background preview composition" below.
-  `background-preview.ts` is the DOM/canvas orchestration on top of it: a
-  BG element list next to a composed canvas preview, wrapped in
-  `web-ui-kit`'s `<wuik-viewport>` for zoom/pan/reset-to-fit. Both screens
-  appear inline automatically once a stage loads, with no tab/sidebar
-  navigation yet.
+  `background-composition.ts` (backlog items 004–005) is pure composition
+  logic — coordinate mapping, draw order, sprite request collection, the
+  parallax position formula, the time-based playback clock, and animation
+  frame classification — with no DOM/canvas/WASM involved, so it's fully
+  unit-testable on its own; see "Background preview composition" and
+  "Animated BG playback" below. `background-preview.ts` is the DOM/canvas
+  orchestration on top of it: a BG element list next to a composed canvas
+  preview, wrapped in `web-ui-kit`'s `<wuik-viewport>` for
+  zoom/pan/reset-to-fit, plus a Play/Pause control driving a
+  `requestAnimationFrame` playback loop. Both screens appear inline
+  automatically once a stage loads, with no tab/sidebar navigation yet.
 
 ## WebAssembly dependency
 
@@ -139,15 +141,39 @@ Clsn-box placement math, applied in the opposite direction here. Elements
 are composed back-to-front by a stable sort on `layerNo` (0 behind, 1 in
 front), preserving `.def` file order within a layer. See
 `.vibe/decisions/003-background-preview-composition-and-coordinate-mapping.md`
-for the full reasoning, including why an `"anim"` element (no static
-sprite reference — `.air`-driven playback isn't resolved by this item) is
-listed but never drawn, distinct from a `"normal"`/`"parallax"` element
-whose sprite reference doesn't exist in the sheet, which gets a
-placeholder tile instead.
+for the full reasoning.
 
 Sprite metadata (for axis/size, and to classify a reference valid or
 invalid) and pixel data are both fetched via `sff`'s own separate WASM
 module (see the diagram above) — `stage`'s own module has no
 sprite-metadata surface at all. A single batched `resolveSprites` call
 decodes every distinct sprite reference in the composition at once,
-rather than one call per element.
+rather than one call per element, including every frame's sprite an
+`"anim"` element's matching animation might show.
+
+## Animated BG playback
+
+Every element's drawn position is offset by a simulated camera
+(`resolveParallaxPosition`, mirroring `stage`'s own
+`ResolveParallaxPosition`): `startX/Y` plus the camera's own offset scaled
+by that element's `deltaX/deltaY` — a `"normal"` element's delta is simply
+`0` in practice, so the same formula applies uniformly rather than
+special-casing `"parallax"`-typed elements. The simulated camera and the
+playback clock (`PlaybackState`/`advancePlayback`) advance from real
+elapsed time, not "one rendered frame = one tick", clamped to a maximum
+per-step delta so a backgrounded/throttled tab resuming can't make
+playback jump ahead.
+
+An `"anim"` element's current frame is resolved once per tick via a
+single batched call to the `stage` WASM module's own
+`resolveAnimationFrames` (mirroring `resolveSprites`'s batching), then
+classified (`classifyAnimationElements`) into one of four states:
+`"no-animation"` (its action number has no matching `[Begin Action N]`
+block) and `"unresolved-sprite"` (the resolved sprite index doesn't exist
+in the sheet) both render the same placeholder tile a broken
+`"normal"`/`"parallax"` reference gets, plus a distinct row label
+naming which; `"blank"` — `stage`'s own "nothing to draw this frame"
+sentinel for a legitimately empty animation — draws nothing and shows no
+label, since it isn't an error; `"resolved"` draws the sprite normally.
+See `.vibe/decisions/004-animated-bg-playback-design.md` for the full
+reasoning behind this split and the playback clock's time-based design.

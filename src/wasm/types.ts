@@ -29,6 +29,21 @@ export interface BGdef {
   yShift: number;
 }
 
+/** One displayed frame within a `BGAnimation`: which sprite to show and how long (in ticks) to hold it. */
+export interface BGAnimFrame {
+  sprite: SpriteRef;
+  time: number;
+}
+
+/**
+ * One `[Begin Action N]` block: an animated BG element's ordered frame
+ * sequence plus its loop point. Keyed by action number in `StageData.animations`.
+ */
+export interface BGAnimation {
+  frames: BGAnimFrame[];
+  loopStart: number;
+}
+
 /** A single `[BG element_name]` section — one layer of the stage's background. */
 export interface BGElement {
   name: string;
@@ -118,6 +133,13 @@ export interface StageData {
    * `docs/data-model.md`, "A zero-value `Stage` is valid").
    */
   elements: BGElement[] | null;
+  /**
+   * Every parsed `[Begin Action N]` block, keyed by action number as a
+   * string (Go's `map[int]BGAnimation` marshals int keys as JSON object
+   * keys, i.e. strings). `null` (not `{}`) when the stage's `.def` defines
+   * no animation blocks at all, mirroring the `elements` nil-map convention above.
+   */
+  animations: Record<string, BGAnimation> | null;
   cameraBounds: CameraBounds;
   stageBoundaries: StageBoundaries;
   model: Model;

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The background preview now plays back over time: elements with a configured scroll ratio visibly move at a different rate than others as a simulated camera pans, and animated background elements cycle through their frames. A Play/Pause control starts and stops playback; pausing and resuming never resets or skips ahead. An animated element referencing a non-existent frame sequence, or a frame whose sprite is missing from the sheet, shows a clear error indicator instead of freezing or crashing the preview.
+
 ## [0.5.0] - 2026-08-27
 
 ### Added
