@@ -8,9 +8,24 @@ import type { WasmBridgeOptions } from "../wasm/bridge.ts";
 // for the resolution rules. Mirrors `lifebar-viewer-web`'s own
 // `lifebar-folder-input.ts` shape (candidate resolution → read → parse),
 // extended with this item's own stricter, named-error sprite-sheet
-// resolution instead of that sibling's silent-if-unresolved one.
+// resolution instead of that sibling's silent-if-unresolved one. Per
+// backlog item 006, also resolves the stage's optional 3D model/`.hdr`
+// environment (never load-blocking, unlike the sprite sheet — see
+// ./model-assets.ts).
 import type { StageData } from "../wasm/types.ts";
+import {
+  type BasenameResolution,
+  resolveFileByBasename,
+} from "./basename-resolution.ts";
+export { resolveFileByBasename } from "./basename-resolution.ts";
+export type { BasenameResolution } from "./basename-resolution.ts";
+import { readFileAsBytes } from "./file-bytes.ts";
+export { readFileAsBytes } from "./file-bytes.ts";
 import type { GatheredFile } from "./folder-entries.ts";
+import {
+  type ModelAssetsResolution,
+  resolveModelAssets,
+} from "./model-assets.ts";
 
 export type CandidateResolution =
   | { status: "no-files" }
@@ -43,67 +58,14 @@ export function resolveCandidates(
   return { status: "needs-selection", candidates };
 }
 
-/** The last path segment of a `.def`-referenced path, forward or backslash separated. */
-function referencedBasename(referencedPath: string): string {
-  const normalized = referencedPath.replace(/\\/g, "/");
-  const segments = normalized.split("/");
-  return segments[segments.length - 1];
-}
+export type SpriteSheetResolution = BasenameResolution;
 
-export type SpriteSheetResolution =
-  | { status: "no-reference" }
-  | { status: "success"; entry: GatheredFile }
-  | { status: "not-found"; referencedName: string }
-  | {
-      status: "ambiguous";
-      referencedName: string;
-      candidates: GatheredFile[];
-    };
-
-/**
- * Resolves the stage's referenced sprite sheet from the already-gathered
- * folder listing, by basename — exact match first, case-insensitive
- * fallback second (real MUGEN/Ikemen `.def` files routinely reference a
- * different case than the file actually has on disk; see the ADR
- * referenced above). More than one match at either level is reported as
- * ambiguous rather than silently picking one.
- */
+/** Resolves the stage's referenced sprite sheet — see `resolveFileByBasename`. */
 export function resolveSpriteSheet(
   referencedSpriteFile: string,
   files: readonly GatheredFile[],
 ): SpriteSheetResolution {
-  if (referencedSpriteFile.trim() === "") {
-    return { status: "no-reference" };
-  }
-
-  const targetBasename = referencedBasename(referencedSpriteFile);
-
-  const exact = files.filter((f) => f.file.name === targetBasename);
-  if (exact.length === 1) return { status: "success", entry: exact[0] };
-  if (exact.length > 1) {
-    return {
-      status: "ambiguous",
-      referencedName: referencedSpriteFile,
-      candidates: exact,
-    };
-  }
-
-  const targetLower = targetBasename.toLowerCase();
-  const caseInsensitive = files.filter(
-    (f) => f.file.name.toLowerCase() === targetLower,
-  );
-  if (caseInsensitive.length === 1) {
-    return { status: "success", entry: caseInsensitive[0] };
-  }
-  if (caseInsensitive.length > 1) {
-    return {
-      status: "ambiguous",
-      referencedName: referencedSpriteFile,
-      candidates: caseInsensitive,
-    };
-  }
-
-  return { status: "not-found", referencedName: referencedSpriteFile };
+  return resolveFileByBasename(referencedSpriteFile, files);
 }
 
 export type StageFolderInputResult =
@@ -116,6 +78,16 @@ export type StageFolderInputResult =
       sffFileName: string;
       sffRelativePath: string;
       sffBytes: Uint8Array;
+      /**
+       * The stage's optional 3D model + `.hdr` environment lighting,
+       * resolved from the same folder listing — never a load-blocking
+       * failure the way the sprite sheet above is: a missing/ambiguous/
+       * unreadable model or environment file still yields an overall
+       * `"success"` result here, with the failure carried inside this
+       * field for the 3D preview to show as its own placeholder. See
+       * backlog item 006 and .vibe/decisions/005.
+       */
+      modelAssets: ModelAssetsResolution;
     }
   | { status: "no-files" }
   | { status: "no-candidate" }
@@ -135,30 +107,6 @@ export type StageFolderInputResult =
       sffFileName: string;
       message: string;
     };
-
-/**
- * Reads a File's bytes via `FileReader` rather than `Blob#arrayBuffer()` —
- * the pinned jsdom version's `Blob` implementation is incomplete, the same
- * real-browser/jsdom parity reason every other OpenKakutou app's file
- * input uses `FileReader` instead.
- */
-export function readFileAsBytes(file: File): Promise<Uint8Array> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result;
-      if (result instanceof ArrayBuffer) {
-        resolve(new Uint8Array(result));
-      } else {
-        reject(new Error("FileReader did not return an ArrayBuffer"));
-      }
-    };
-    reader.onerror = () => {
-      reject(reader.error ?? new Error("failed to read file"));
-    };
-    reader.readAsArrayBuffer(file);
-  });
-}
 
 export interface StageFolderInputOptions {
   /** Reads a File's bytes. Defaults to `readFileAsBytes`; injectable for testing. */
@@ -243,6 +191,10 @@ export async function loadStageFromChosenEntry(
     };
   }
 
+  const modelAssets = await resolveModelAssets(stage, files, {
+    readFileBytes,
+  });
+
   return {
     status: "success",
     fileName,
@@ -252,6 +204,7 @@ export async function loadStageFromChosenEntry(
     sffFileName: sffEntry.file.name,
     sffRelativePath: sffEntry.relativePath,
     sffBytes,
+    modelAssets,
   };
 }
 

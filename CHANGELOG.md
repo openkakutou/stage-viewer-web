@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Stages that use Ikemen GO's 3D model extension now show their actual 3D model in the preview, lit by its declared environment lighting, composited together with any flat background elements the stage also defines. The model can be freely orbited, panned, and zoomed. A stage with no 3D model looks exactly as before. A 3D model or lighting file that can't be found or loaded shows a clear message instead of a broken or blank preview.
+
 ## [0.6.0] - 2026-08-29
 
 ### Added

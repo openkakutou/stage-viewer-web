@@ -1,3 +1,4 @@
+import type { ModelAssetsResolution } from "../input/model-assets.ts";
 import {
   type WasmBridgeOptions,
   resolveAnimationFrames as defaultResolveAnimationFrames,
@@ -48,6 +49,10 @@ import {
   collectSpriteRequests,
   spriteRequestKey,
 } from "./background-composition.ts";
+import {
+  type ModelPreviewOptions,
+  renderModelPreview as defaultRenderModelPreview,
+} from "./model-preview.ts";
 
 export interface BackgroundPreviewOptions {
   /** Decodes sprite sheet metadata via the WASM bridge. Defaults to the real bridge; injectable for testing. */
@@ -60,16 +65,28 @@ export interface BackgroundPreviewOptions {
   resolveAnimationFrames?: typeof defaultResolveAnimationFrames;
   /** Forwarded to `resolveAnimationFrames`; injectable for testing. */
   stageBridgeOptions?: WasmBridgeOptions;
-  /** Executes a draw plan on the canvas. Defaults to the real canvas 2D draw; injectable for testing. */
+  /** Executes a draw plan on the canvas. Defaults to the real canvas 2D draw; injectable for testing. `hasModelLayer` (4th arg) tells it whether to skip its own opaque surface fill (backlog item 006) so a composited 3D layer behind it shows through. */
   drawComposition?: (
     canvas: HTMLCanvasElement,
     plan: DrawCommand[],
     selectedElementIndex: number | null,
+    hasModelLayer: boolean,
   ) => void;
   /** Schedules the next playback tick. Defaults to the real global; injectable for deterministic testing. */
   requestAnimationFrame?: (callback: FrameRequestCallback) => number;
   /** Cancels a scheduled playback tick. Defaults to the real global; injectable for deterministic testing. */
   cancelAnimationFrame?: (handle: number) => void;
+  /**
+   * The stage's resolved 3D model/`.hdr` assets (backlog item 006), from
+   * the same folder load `sffBytes` came from. Defaults to `{status:
+   * "none"}` — a stage with no `[Model]` data (the vast majority) adds
+   * nothing this option controls.
+   */
+  modelAssets?: ModelAssetsResolution;
+  /** Renders the 3D model layer. Defaults to the real renderer; injectable for testing. */
+  renderModelPreview?: typeof defaultRenderModelPreview;
+  /** Forwarded to the 3D model layer's own loaders/renderer construction; injectable for testing. */
+  modelPreviewOptions?: ModelPreviewOptions;
 }
 
 function elementStatusLabel(
@@ -113,12 +130,75 @@ export function renderBackgroundPreview(
   // wider-typed parameter.
   const loadedStage = stage;
 
+  const modelAssets = options.modelAssets ?? { status: "none" as const };
+  const renderModelPreviewFn =
+    options.renderModelPreview ?? defaultRenderModelPreview;
+  // Whether this stage carries 3D model data at all (whether or not it
+  // actually resolved/loaded) — an attempted-but-failed model still gets
+  // its own layer (renderModelPreviewFn shows its own placeholder/error
+  // there, backlog item 006 AC), so the 2D canvas behind it must stay
+  // transparent either way; only a stage with no [Model] data at all
+  // (`"none"`) keeps this app's pre-item-006 2D-only behavior untouched.
+  const hasModelLayer = modelAssets.status !== "none";
+
+  // Tracks the mounted 3D layer element (if any) so a later call to this
+  // function on the same root can tear it down explicitly — replacing it
+  // via root.replaceChildren() above only detaches the DOM node, it does
+  // not by itself run renderModelPreviewFn's own internal cleanup (keyed
+  // on that exact element), which would otherwise leak its renderer/
+  // ResizeObserver/pending frame against a now-detached canvas.
+  let modelLayerElement: HTMLElement | null = null;
+
+  // Mounts the 3D layer as `container`'s first child (paints as the back
+  // layer in normal DOM stacking order — the 2D canvas above it, its own
+  // background made transparent via hasModelLayer, then composites on
+  // top). The mode badge is appended last, on top of everything, by the
+  // caller, once every other layer is in place.
+  function mountModelLayer(container: HTMLElement): void {
+    const modelLayer = document.createElement("div");
+    modelLayer.className = "background-preview__model-layer";
+    container.prepend(modelLayer);
+    modelLayerElement = modelLayer;
+    renderModelPreviewFn(
+      modelLayer,
+      loadedStage,
+      modelAssets,
+      options.modelPreviewOptions,
+    );
+  }
+
+  function disposeModelLayer(): void {
+    if (modelLayerElement) {
+      renderModelPreviewFn(modelLayerElement, null, { status: "none" });
+    }
+  }
+
+  function appendModeBadge(container: HTMLElement): void {
+    const badge = document.createElement("p");
+    badge.className = "background-preview__mode-badge";
+    badge.textContent = "3D preview — background elements stay screen-fixed";
+    container.appendChild(badge);
+  }
+
   const elements = loadedStage.elements ?? [];
   if (elements.length === 0) {
-    const empty = document.createElement("p");
-    empty.className = "background-preview__empty";
-    empty.textContent = "No BG elements configured.";
-    root.appendChild(empty);
+    if (!hasModelLayer) {
+      const empty = document.createElement("p");
+      empty.className = "background-preview__empty";
+      empty.textContent = "No BG elements configured.";
+      root.appendChild(empty);
+      return;
+    }
+    // A model-based stage can legitimately have zero 2D BG elements — the
+    // 3D model *is* the background. Skip straight to the 3D-only layer,
+    // none of the 2D list/canvas/playback machinery below applies.
+    const stack = document.createElement("div");
+    stack.className = "background-preview__stack";
+    stack.style.aspectRatio = `${loadedStage.bgDef.localCoordWidth} / ${loadedStage.bgDef.localCoordHeight}`;
+    root.appendChild(stack);
+    mountModelLayer(stack);
+    appendModeBadge(stack);
+    stopPlaybackByRoot.set(root, disposeModelLayer);
     return;
   }
 
@@ -138,15 +218,24 @@ export function renderBackgroundPreview(
   status.textContent = "Decoding sprites…";
   list.appendChild(status);
 
+  const stack = document.createElement("div");
+  stack.className = "background-preview__stack";
+  stack.style.aspectRatio = `${loadedStage.bgDef.localCoordWidth} / ${loadedStage.bgDef.localCoordHeight}`;
+
   const viewport = document.createElement("wuik-viewport");
   viewport.className = "background-preview__viewport";
-  viewport.style.aspectRatio = `${loadedStage.bgDef.localCoordWidth} / ${loadedStage.bgDef.localCoordHeight}`;
   const canvas = document.createElement("canvas");
   canvas.className = "background-preview__canvas";
   canvas.hidden = true;
   viewport.appendChild(canvas);
+  stack.appendChild(viewport);
 
-  panel.append(list, viewport);
+  if (hasModelLayer) {
+    mountModelLayer(stack); // prepended — ends up behind the viewport above
+    appendModeBadge(stack);
+  }
+
+  panel.append(list, stack);
   root.appendChild(panel);
 
   const requestAnimationFrameFn =
@@ -186,7 +275,7 @@ export function renderBackgroundPreview(
       { x: playbackState.cameraX, y: 0 },
       animationStatusByElementIndex,
     );
-    drawComposition(canvas, plan, selectedElementIndex);
+    drawComposition(canvas, plan, selectedElementIndex, hasModelLayer);
   }
 
   function updateAnimRowLabels(): void {
@@ -297,6 +386,7 @@ export function renderBackgroundPreview(
     isPlaying = false;
     if (rafHandle !== null) cancelAnimationFrameFn(rafHandle);
     rafHandle = null;
+    disposeModelLayer();
   });
 
   async function finish(
@@ -341,7 +431,7 @@ export function renderBackgroundPreview(
       (index) => {
         selectedElementIndex = index;
         highlightRow(list, index);
-        drawComposition(canvas, plan, selectedElementIndex);
+        drawComposition(canvas, plan, selectedElementIndex, hasModelLayer);
       },
     );
     rowStatusSpansByIndex = built.statusSpansByIndex;
@@ -458,15 +548,25 @@ export function defaultDrawComposition(
   canvas: HTMLCanvasElement,
   plan: DrawCommand[],
   selectedElementIndex: number | null,
+  hasModelLayer = false,
 ): void {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
-  const surfaceColor =
-    getComputedStyle(canvas).getPropertyValue("--wuik-color-surface").trim() ||
-    "#e5e5e5";
-  ctx.fillStyle = surfaceColor;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  if (hasModelLayer) {
+    // Backlog item 006: a 3D model layer is composited behind this canvas
+    // — stay transparent instead of painting the usual opaque surface
+    // fill, so it (or its own placeholder/error banner) shows through
+    // wherever no 2D sprite covers a pixel.
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  } else {
+    const surfaceColor =
+      getComputedStyle(canvas)
+        .getPropertyValue("--wuik-color-surface")
+        .trim() || "#e5e5e5";
+    ctx.fillStyle = surfaceColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
 
   for (const command of plan) {
     if (command.kind === "sprite") {

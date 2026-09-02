@@ -28,6 +28,9 @@ const testdataDir = path.resolve(import.meta.dirname, "..", "wasm", "testdata");
 const sampleDefBytes = new Uint8Array(
   readFileSync(path.join(testdataDir, "sample.def")),
 );
+const sampleWithModelDefBytes = new Uint8Array(
+  readFileSync(path.join(testdataDir, "sample-with-model.def")),
+);
 
 function gathered(
   name: string,
@@ -137,6 +140,63 @@ describe("loadStageFromFolderFiles — nominal path", () => {
     expect(result.status).toBe("success");
     if (result.status !== "success") throw new Error("expected success");
     expect(result.sffRelativePath).toBe("a/stage0.sff");
+  });
+});
+
+describe("loadStageFromFolderFiles — 3D model assets (backlog item 006)", () => {
+  it("reports modelAssets 'none' for a stage with no [Model] data", async () => {
+    const def = defFile("stage.def");
+    const sff = sffFile("stage0.sff");
+
+    const result = await loadStageFromFolderFiles([def, sff], {
+      bridgeOptions: testBridgeOptions,
+    });
+
+    expect(result.status).toBe("success");
+    if (result.status !== "success") throw new Error("expected success");
+    expect(result.modelAssets).toEqual({ status: "none" });
+  });
+
+  it("resolves and reads the model and its .hdr environment for a 3D stage", async () => {
+    const def = gathered("stage.def", "stage.def", sampleWithModelDefBytes);
+    const sff = sffFile("stage0.sff");
+    const model = gathered(
+      "mystage.glb",
+      "mystage.glb",
+      new Uint8Array([9, 9, 9]),
+    );
+    const hdr = gathered("env.hdr", "env.hdr", new Uint8Array([8, 8, 8]));
+
+    const result = await loadStageFromFolderFiles([def, sff, model, hdr], {
+      bridgeOptions: testBridgeOptions,
+    });
+
+    expect(result.status).toBe("success");
+    if (result.status !== "success") throw new Error("expected success");
+    expect(result.stage.bgDef.modelFile).toBe("mystage.glb");
+    expect(result.modelAssets).toEqual({
+      status: "success",
+      modelBytes: new Uint8Array([9, 9, 9]),
+      modelFileName: "mystage.glb",
+      environmentBytes: new Uint8Array([8, 8, 8]),
+      environmentFileName: "env.hdr",
+    });
+  });
+
+  it("still loads the stage successfully when the referenced model file is missing", async () => {
+    const def = gathered("stage.def", "stage.def", sampleWithModelDefBytes);
+    const sff = sffFile("stage0.sff");
+
+    const result = await loadStageFromFolderFiles([def, sff], {
+      bridgeOptions: testBridgeOptions,
+    });
+
+    expect(result.status).toBe("success");
+    if (result.status !== "success") throw new Error("expected success");
+    expect(result.modelAssets).toEqual({
+      status: "model-not-found",
+      referencedName: "mystage.glb",
+    });
   });
 });
 

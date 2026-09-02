@@ -225,23 +225,35 @@ What to do with the files gathered from a folder selection, regarding which one 
 | needs-selection | `candidates: GatheredFile[]` — several candidates, caller must ask |
 Defined in: `src/input/stage-file-input.ts`
 
-## SpriteSheetResolution
-The outcome of resolving a stage's referenced sprite sheet against a gathered folder listing, by basename (exact match first, case-insensitive fallback second).
+## BasenameResolution
+The outcome of resolving a `.def`-referenced path against a gathered folder listing, by basename (exact match first, case-insensitive fallback second). Shared by every basename-referenced asset this app resolves from a loaded folder — the sprite sheet (`SpriteSheetResolution` is a type alias of this) and, per backlog item 006, an optional 3D model/`.hdr` environment file (`ModelAssetsResolution`, below).
 
 | Variant | Fields |
 |---|---|
-| no-reference | (none) — the stage's `.def` has no sprite sheet key at all |
+| no-reference | (none) — the stage's `.def` has no key for this reference at all |
 | success | `entry: GatheredFile` |
 | not-found | `referencedName: string` — the exact string the `.def` referenced |
 | ambiguous | `referencedName: string`, `candidates: GatheredFile[]` — more than one file shares the resolved name |
-Defined in: `src/input/stage-file-input.ts`
+Defined in: `src/input/basename-resolution.ts`
+
+## ModelAssetsResolution
+Backlog item 006: the outcome of resolving (and reading) a 3D model-based stage's referenced glTF model and, if any, its `.hdr` environment lighting from a gathered folder listing. Unlike `BasenameResolution`'s use for the sprite sheet, a failure here never blocks the overall stage load — it's carried as its own typed result for the 3D preview layer to show as a placeholder/error instead.
+
+| Variant | Fields |
+|---|---|
+| none | (none) — the stage has no `[Model]` data at all (`bgDef.modelFile === ""`) |
+| success | `modelBytes: Uint8Array`, `modelFileName: string`, `environmentBytes: Uint8Array \| null`, `environmentFileName: string \| null` |
+| model-not-found / environment-not-found | `referencedName: string` |
+| model-ambiguous / environment-ambiguous | `referencedName: string`, `candidates: GatheredFile[]` |
+| model-read-error / environment-read-error | `fileName: string`, `message: string` |
+Defined in: `src/input/model-assets.ts`
 
 ## StageFolderInputResult
 The end-to-end result of loading a stage from a folder: candidate resolution passthrough, plus the stage-load and sprite-sheet-resolution outcomes.
 
 | Variant | Fields |
 |---|---|
-| success | `fileName`, `relativePath`, `stage: StageData`, `defBytes`, `sffFileName`, `sffRelativePath`, `sffBytes` |
+| success | `fileName`, `relativePath`, `stage: StageData`, `defBytes`, `sffFileName`, `sffRelativePath`, `sffBytes`, `modelAssets: ModelAssetsResolution` |
 | no-files / no-candidate | (none) |
 | needs-selection | `candidates: GatheredFile[]` |
 | read-error / parse-error | `fileName: string`, `message: string` |
@@ -249,3 +261,20 @@ The end-to-end result of loading a stage from a folder: candidate resolution pas
 | sprite-ambiguous | `fileName: string`, `referencedName: string`, `candidates: GatheredFile[]` |
 | sprite-read-error | `fileName: string`, `sffFileName: string`, `message: string` |
 Defined in: `src/input/stage-file-input.ts`
+
+## CameraParams
+Backlog item 006: a resolved 3D camera projection — the stage's own declared `[Camera]` fov/near/far, or a sane default when the stage declares a degenerate (≤ 0, or far not greater than the resolved near) value.
+
+| Field | Type | Notes |
+|---|---|---|
+| fov, near, far | number | Defaults: fov 45, near 0.1, far 10000 |
+Defined in: `src/viewer/model-camera.ts`
+
+## ModelTransform
+Backlog item 006: a 3D model's placement/scale, mapped straight from the stage's own `Model` offset/scale fields into tuple form for a three.js `Object3D`.
+
+| Field | Type | Notes |
+|---|---|---|
+| position | readonly [number, number, number] | `[offsetX, offsetY, offsetZ]` |
+| scale | readonly [number, number, number] | `[scaleX, scaleY, scaleZ]` |
+Defined in: `src/viewer/model-camera.ts`

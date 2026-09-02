@@ -1,0 +1,39 @@
+[Info]
+name = Model Stage
+
+[BGDef]
+spr = stage0.sff
+model = mystage.glb
+
+[StageInfo]
+localcoord = 320,240
+zoffset = 220
+
+[Camera]
+boundleft = -180
+boundright = 180
+boundhigh = -240
+boundlow = 0
+zoomout = 0.75
+zoomin = 1.5
+near = 1
+far = 1000
+fov = 45
+
+[PlayerInfo]
+leftbound = -1000
+rightbound = 1000
+topbound = -500
+botbound = 500
+
+[Model]
+offset = 0,0,0
+scale = 1,1,1
+environment = env.hdr
+environmentintensity = 1
+
+[BG sky]
+type = normal
+spriteno = 0,0
+layerno = 0
+start = 0,0

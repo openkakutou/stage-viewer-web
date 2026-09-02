@@ -14,8 +14,9 @@ flowchart LR
     app["app\n(src/main.ts)"] --> input["input\n(src/input/)"]
     app --> viewer["viewer\n(src/viewer/)"]
     input --> wasm["wasm\n(src/wasm/)"]
-    input -.->|loaded stage| viewer
+    input -.->|loaded stage + model assets| viewer
     viewer --> wasm
+    viewer -.->|dynamic import, 3D stages only| three["three + loaders\n(npm, code-split)"]
     wasm -.->|fetch + WebAssembly.instantiate| module["stage.wasm\n(public/wasm/, gitignored)"]
     viewer -.->|fetch + WebAssembly.instantiate| sffModule["sff.wasm\n(public/wasm/sff/, gitignored)"]
     scripts["scripts\n(download-wasm.mjs,\ndownload-sff-wasm.mjs)"] -.->|fetches at dev-setup time| module
@@ -23,6 +24,7 @@ flowchart LR
 
     style module stroke-dasharray: 5 5
     style sffModule stroke-dasharray: 5 5
+    style three stroke-dasharray: 5 5
 ```
 
 - **`app`** (`src/main.ts`, `src/version.ts`, `src/style.css`) — the entry
@@ -40,9 +42,16 @@ flowchart LR
   stage's own `.def` (auto if there's exactly one, otherwise the caller
   must ask the user), reads and loads it through `wasm`, then resolves the
   `.def`'s referenced sprite sheet from that same folder listing by
-  filename — see "Sprite sheet resolution" below.
+  filename — see "Sprite sheet resolution" below. `basename-resolution.ts`
+  and `file-bytes.ts` hold, respectively, that basename-matching rule and
+  the `FileReader`-based byte-reading helper as their own small modules —
+  split out so `model-assets.ts` (backlog item 006, below) can reuse both
+  without an import cycle back into `stage-file-input.ts`.
   `stage-file-input-view.ts` renders the folder-picker + drag-and-drop UI
   and the multi-candidate/error/success states on top of that logic.
+  `model-assets.ts` resolves a 3D model-based stage's referenced model/
+  `.hdr` files the same way, but never blocks the overall load on failure
+  — see "3D model-based stage preview" below.
 - **`wasm`** (`src/wasm/`) — the bridge to the `stage` WebAssembly module.
   `bridge.ts` loads `wasm_exec.js` and instantiates `stage.wasm`
   client-side (both fetched from `public/wasm/`, gitignored — see
@@ -80,6 +89,14 @@ flowchart LR
   zoom/pan/reset-to-fit, plus a Play/Pause control driving a
   `requestAnimationFrame` playback loop. Both screens appear inline
   automatically once a stage loads, with no tab/sidebar navigation yet.
+  `model-camera.ts` (backlog item 006) is pure math — deriving a usable
+  3D camera projection and model transform from the stage's own declared
+  fields, no `three`/DOM dependency, unit-tested directly.
+  `model-preview.ts` is the `three`/DOM orchestration on top of it: loads
+  the model/environment, builds the scene, and renders it into
+  `web-ui-kit`'s `<wuik-viewport-3d>` — see "3D model-based stage preview"
+  below. `background-preview.ts` mounts it as an extra layer, behind its
+  own canvas, when the loaded stage has one.
 
 ## WebAssembly dependency
 
@@ -177,3 +194,42 @@ sentinel for a legitimately empty animation — draws nothing and shows no
 label, since it isn't an error; `"resolved"` draws the sprite normally.
 See `.vibe/decisions/004-animated-bg-playback-design.md` for the full
 reasoning behind this split and the playback clock's time-based design.
+
+## 3D model-based stage preview
+
+A stage using Ikemen GO's 3D model extension (`bgDef.modelFile !== ""`)
+gets an extra layer in the same preview box: a `three`-rendered glTF
+model, lit by its declared `.hdr` environment (image-based lighting),
+composited *behind* the existing 2D BG-element canvas (which becomes
+transparent in this mode instead of painting its usual opaque surface
+fill). `three` is the first 3D rendering library used anywhere in this
+org — see `.vibe/decisions/005-3d-model-preview-design.md` for the full
+design and why it was chosen. A persistent badge marks this composited
+mode, since the 2D layer keeps its own fixed screen-space mapping rather
+than being re-projected through the 3D camera — the two are visually
+stacked, not unified into one 3D-projected scene.
+
+Camera control comes from `web-ui-kit`'s `<wuik-viewport-3d>`, which owns
+only orbit/pan/zoom camera *math* and never touches WebGL itself (see
+that repo's `.vibe/decisions/010`) — `model-preview.ts` is entirely
+responsible for the actual `THREE.WebGLRenderer`/`Scene`/`PerspectiveCamera`
+and applying the component's camera snapshot to it. Rendering is
+on-demand, not a continuous loop: a scene is genuinely static once
+loaded (no skeletal/armature animation is ever played, matching Ikemen
+GO's own current limitation), so a render is only requested after the
+initial load, on a camera-change event, on a host resize
+(`ResizeObserver`), or after a lost WebGL context is restored — each
+coalesced through a single `requestAnimationFrame` so a drag gesture
+firing many events in one frame only pays for one render.
+
+`three` and its loaders (`GLTFLoader`, `HDRLoader`) are only ever
+dynamically imported from inside `model-preview.ts`'s own default
+option functions, themselves only invoked once a stage actually
+resolves 3D model assets — Vite code-splits them into their own chunks
+(confirmed via a real `npm run build`), so a 2D-only stage (the common
+case) never downloads or evaluates `three` at all. A model/`.hdr` file
+that can't be resolved from the loaded folder, can't be read, or fails
+to parse never blocks the rest of the stage from loading — it shows its
+own placeholder/error banner in that layer instead, visually distinct
+from both the 2D layer's own sprite-placeholder outline and
+`<wuik-viewport-3d>`'s own "WebGL unsupported" panel.

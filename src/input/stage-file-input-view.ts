@@ -32,6 +32,7 @@ export interface StageFileInputViewOptions {
     sffFileName: string;
     sffRelativePath: string;
     sffBytes: Uint8Array;
+    modelAssets: import("./model-assets.ts").ModelAssetsResolution;
   }) => void;
   /** Forwarded to the read/parse/resolve layer; injectable for testing. */
   fileOptions?: StageFolderInputOptions;

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import type { ModelAssetsResolution } from "../input/model-assets.ts";
 import type {
   SpritePixelResult,
   SpriteSheetResult,
@@ -432,5 +433,139 @@ describe("renderBackgroundPreview", () => {
     expect(call?.[2]).toBe(1); // selectedElementIndex
     expect(rows[1]?.getAttribute("aria-current")).toBe("true");
     expect(rows[0]?.hasAttribute("aria-current")).toBe(false);
+  });
+});
+
+describe("renderBackgroundPreview — 3D model layer (backlog item 006)", () => {
+  const noModel: ModelAssetsResolution = { status: "none" };
+  const successModel: ModelAssetsResolution = {
+    status: "success",
+    modelBytes: new Uint8Array([1]),
+    modelFileName: "mystage.glb",
+    environmentBytes: null,
+    environmentFileName: null,
+  };
+  const failedModel: ModelAssetsResolution = {
+    status: "model-not-found",
+    referencedName: "mystage.glb",
+  };
+
+  it("never invokes the 3D renderer, and draws with hasModelLayer=false, for a stage with no [Model] data", async () => {
+    const root = document.createElement("div");
+    const drawComposition = vi.fn();
+    const renderModelPreview = vi.fn();
+
+    renderBackgroundPreview(
+      root,
+      stageWith([element({ name: "sky" })]),
+      new Uint8Array(),
+      {
+        loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+        resolveSpritePixels: stubResolveSpritePixels([
+          onePixelResult[0],
+        ] as SpritePixelResult[]),
+        drawComposition,
+        renderModelPreview,
+        modelAssets: noModel,
+      },
+    );
+    await vi.waitFor(() => {
+      expect(drawComposition).toHaveBeenCalled();
+    });
+
+    expect(renderModelPreview).not.toHaveBeenCalled();
+    expect(root.querySelector(".background-preview__mode-badge")).toBeNull();
+    const call = drawComposition.mock.calls[0];
+    expect(call?.[3]).toBe(false); // hasModelLayer
+  });
+
+  it("mounts the 3D renderer into its own layer and shows the mode badge for a successfully-resolved model", async () => {
+    const root = document.createElement("div");
+    const drawComposition = vi.fn();
+    const renderModelPreview = vi.fn();
+    const stage = stageWith([element({ name: "sky" })]);
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels([
+        onePixelResult[0],
+      ] as SpritePixelResult[]),
+      drawComposition,
+      renderModelPreview,
+      modelAssets: successModel,
+    });
+    await vi.waitFor(() => {
+      expect(drawComposition).toHaveBeenCalled();
+    });
+
+    expect(renderModelPreview).toHaveBeenCalledTimes(1);
+    const [layerRoot, passedStage, passedAssets] =
+      renderModelPreview.mock.calls[0];
+    expect(layerRoot).toBeInstanceOf(HTMLElement);
+    expect((layerRoot as HTMLElement).className).toBe(
+      "background-preview__model-layer",
+    );
+    expect(passedStage).toBe(stage);
+    expect(passedAssets).toBe(successModel);
+    expect(
+      root.querySelector(".background-preview__mode-badge"),
+    ).not.toBeNull();
+    const call = drawComposition.mock.calls[0];
+    expect(call?.[3]).toBe(true); // hasModelLayer
+  });
+
+  it("still mounts the 3D renderer (which shows its own failure banner) and the mode badge when asset resolution failed", async () => {
+    const root = document.createElement("div");
+    const renderModelPreview = vi.fn();
+
+    renderBackgroundPreview(
+      root,
+      stageWith([element({ name: "sky" })]),
+      new Uint8Array(),
+      {
+        loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+        resolveSpritePixels: stubResolveSpritePixels([
+          onePixelResult[0],
+        ] as SpritePixelResult[]),
+        renderModelPreview,
+        modelAssets: failedModel,
+      },
+    );
+    await vi.waitFor(() => {
+      expect(renderModelPreview).toHaveBeenCalled();
+    });
+
+    expect(renderModelPreview.mock.calls[0]?.[2]).toBe(failedModel);
+    expect(
+      root.querySelector(".background-preview__mode-badge"),
+    ).not.toBeNull();
+  });
+
+  it("still renders the 3D layer for a stage with a model but zero 2D BG elements", () => {
+    const root = document.createElement("div");
+    const renderModelPreview = vi.fn();
+
+    renderBackgroundPreview(root, stageWith([]), new Uint8Array(), {
+      renderModelPreview,
+      modelAssets: successModel,
+    });
+
+    expect(renderModelPreview).toHaveBeenCalledTimes(1);
+    expect(
+      root.querySelector(".background-preview__model-layer"),
+    ).not.toBeNull();
+  });
+
+  it("shows the plain empty state, with no 3D layer, for a stage with neither 2D elements nor model data", () => {
+    const root = document.createElement("div");
+    const renderModelPreview = vi.fn();
+
+    renderBackgroundPreview(root, stageWith([]), new Uint8Array(), {
+      renderModelPreview,
+      modelAssets: noModel,
+    });
+
+    expect(renderModelPreview).not.toHaveBeenCalled();
+    expect(root.querySelector(".background-preview__empty")).not.toBeNull();
   });
 });

@@ -57,7 +57,10 @@ export function renderApp(
         backgroundPreviewContainer,
         result.stage,
         result.sffBytes,
-        { bridgeOptions: options.sffBridgeOptions },
+        {
+          bridgeOptions: options.sffBridgeOptions,
+          modelAssets: result.modelAssets,
+        },
       );
     },
     bridgeOptions: options.bridgeOptions,

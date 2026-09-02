@@ -1,5 +1,5 @@
 ---
-status: todo
+status: in_progress
 depends_on: [004]
 ---
 # 3D Model-Based Stage Preview Renderer
