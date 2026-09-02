@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-02
+
 ### Added
 
 - Stages that use Ikemen GO's 3D model extension now show their actual 3D model in the preview, lit by its declared environment lighting, composited together with any flat background elements the stage also defines. The model can be freely orbited, panned, and zoomed. A stage with no 3D model looks exactly as before. A 3D model or lighting file that can't be found or loaded shows a clear message instead of a broken or blank preview.
@@ -41,7 +43,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The app now uses the shared OpenKakutou design system for its layout and visual style, and can load a stage file (background, camera, and layer data) through the underlying stage library — the on-screen file loading and preview screens themselves come in later updates.
 
-[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.3.0...v0.4.0
