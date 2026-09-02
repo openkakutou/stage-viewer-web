@@ -39,7 +39,7 @@ WASM module directly for that, fetched into its own subdirectory — never
 ```sh
 npm run wasm:download:sff -- <version>
 # e.g.
-npm run wasm:download:sff -- v0.3.0
+npm run wasm:download:sff -- v0.3.1
 ```
 
 Implementation: `scripts/download-sff-wasm.mjs` — same shape, same exit
