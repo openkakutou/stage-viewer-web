@@ -1,3 +1,4 @@
+import { onLocaleChange, t } from "../i18n/i18n.ts";
 import type { ModelAssetsResolution } from "../input/model-assets.ts";
 import {
   type WasmBridgeOptions,
@@ -96,15 +97,20 @@ function elementStatusLabel(
 ): string {
   if (element.type === "anim") {
     if (!animationStatus || animationStatus.kind === "no-animation") {
-      return "no matching animation block";
+      return t("background.statusNoAnimation", "no matching animation block");
     }
     if (animationStatus.kind === "unresolved-sprite") {
-      return "resolved sprite is out of range";
+      return t(
+        "background.statusUnresolvedSprite",
+        "resolved sprite is out of range",
+      );
     }
     return "";
   }
   const key = spriteRequestKey(element.sprite.group, element.sprite.image);
-  return spriteMetaByKey.has(key) ? "" : "invalid sprite reference";
+  return spriteMetaByKey.has(key)
+    ? ""
+    : t("background.statusInvalidSprite", "invalid sprite reference");
 }
 
 // Cancels a previous call's playback loop when `renderBackgroundPreview` is
@@ -148,6 +154,13 @@ export function renderBackgroundPreview(
   // on that exact element), which would otherwise leak its renderer/
   // ResizeObserver/pending frame against a now-detached canvas.
   let modelLayerElement: HTMLElement | null = null;
+  // Live locale switching (backlog item 008): every render path below
+  // registers here whatever it needs re-translated in place on a locale
+  // change, then a single `onLocaleChange` subscription (set up once, at
+  // the end of whichever branch runs) invokes all of them — mirrors
+  // `stage-file-input-view.ts`'s own approach, applied per-branch since
+  // this function has several mutually-exclusive early-return shapes.
+  const localeRefreshers: Array<() => void> = [];
 
   // Mounts the 3D layer as `container`'s first child (paints as the back
   // layer in normal DOM stacking order — the 2D canvas above it, its own
@@ -176,7 +189,16 @@ export function renderBackgroundPreview(
   function appendModeBadge(container: HTMLElement): void {
     const badge = document.createElement("p");
     badge.className = "background-preview__mode-badge";
-    badge.textContent = "3D preview — background elements stay screen-fixed";
+    badge.textContent = t(
+      "background.modeBadge3D",
+      "3D preview — background elements stay screen-fixed",
+    );
+    localeRefreshers.push(() => {
+      badge.textContent = t(
+        "background.modeBadge3D",
+        "3D preview — background elements stay screen-fixed",
+      );
+    });
     container.appendChild(badge);
   }
 
@@ -185,8 +207,18 @@ export function renderBackgroundPreview(
     if (!hasModelLayer) {
       const empty = document.createElement("p");
       empty.className = "background-preview__empty";
-      empty.textContent = "No BG elements configured.";
+      empty.textContent = t(
+        "background.noElements",
+        "No BG elements configured.",
+      );
       root.appendChild(empty);
+      const unsubscribeLocale = onLocaleChange(() => {
+        empty.textContent = t(
+          "background.noElements",
+          "No BG elements configured.",
+        );
+      });
+      stopPlaybackByRoot.set(root, unsubscribeLocale);
       return;
     }
     // A model-based stage can legitimately have zero 2D BG elements — the
@@ -198,7 +230,13 @@ export function renderBackgroundPreview(
     root.appendChild(stack);
     mountModelLayer(stack);
     appendModeBadge(stack);
-    stopPlaybackByRoot.set(root, disposeModelLayer);
+    const unsubscribeLocale = onLocaleChange(() => {
+      for (const refresh of localeRefreshers) refresh();
+    });
+    stopPlaybackByRoot.set(root, () => {
+      disposeModelLayer();
+      unsubscribeLocale();
+    });
     return;
   }
 
@@ -215,8 +253,13 @@ export function renderBackgroundPreview(
   const status = document.createElement("p");
   status.className = "background-preview__status";
   status.setAttribute("role", "status");
-  status.textContent = "Decoding sprites…";
+  status.textContent = t("background.decodingSprites", "Decoding sprites…");
   list.appendChild(status);
+  localeRefreshers.push(() => {
+    if (status.isConnected) {
+      status.textContent = t("background.decodingSprites", "Decoding sprites…");
+    }
+  });
 
   const stack = document.createElement("div");
   stack.className = "background-preview__stack";
@@ -258,6 +301,7 @@ export function renderBackgroundPreview(
   let resolvedSpriteByElementIndex = new Map<number, SpriteRef>();
   let animationStatusByElementIndex: ReadonlyMap<number, AnimationFrameStatus> =
     new Map();
+  let rowMainSpansByIndex = new Map<number, HTMLElement>();
   let rowStatusSpansByIndex = new Map<number, HTMLElement>();
   let playbackState: PlaybackState = INITIAL_PLAYBACK_STATE;
   let isPlaying = false;
@@ -290,6 +334,26 @@ export function renderBackgroundPreview(
       );
       span.textContent = label ? ` · ${label}` : "";
     }
+  }
+
+  // Re-translates every already-rendered row's main text and status label
+  // in place on a live locale change — unlike `updateAnimRowLabels` (a
+  // per-tick refresh scoped to animated rows only), this covers every row,
+  // since a locale change can affect any of them regardless of type.
+  function refreshAllRowTexts(): void {
+    elements.forEach((element, index) => {
+      const mainSpan = rowMainSpansByIndex.get(index);
+      if (mainSpan) mainSpan.textContent = rowSummaryText(element);
+      const statusSpan = rowStatusSpansByIndex.get(index);
+      if (statusSpan) {
+        const label = elementStatusLabel(
+          element,
+          spriteMetaByKey,
+          animationStatusByElementIndex.get(index),
+        );
+        statusSpan.textContent = label ? ` · ${label}` : "";
+      }
+    });
   }
 
   // Resolves every animated element that actually has a matching animation
@@ -365,12 +429,21 @@ export function renderBackgroundPreview(
     }
   }
 
+  function playPauseLabel(): string {
+    return isPlaying
+      ? t("background.pause", "Pause")
+      : t("background.play", "Play");
+  }
+
   const playPauseButton = document.createElement("wuik-button");
   playPauseButton.setAttribute("variant", "secondary");
-  playPauseButton.textContent = "Play";
+  playPauseButton.textContent = playPauseLabel();
+  localeRefreshers.push(() => {
+    playPauseButton.textContent = playPauseLabel();
+  });
   playPauseButton.addEventListener("click", () => {
     isPlaying = !isPlaying;
-    playPauseButton.textContent = isPlaying ? "Pause" : "Play";
+    playPauseButton.textContent = playPauseLabel();
     if (isPlaying) {
       // Reset so a resume never counts the paused wall-clock gap as elapsed
       // playback time — the very next tick's own delta is treated as 0.
@@ -382,11 +455,15 @@ export function renderBackgroundPreview(
     }
   });
 
+  const unsubscribeLocale = onLocaleChange(() => {
+    for (const refresh of localeRefreshers) refresh();
+  });
   stopPlaybackByRoot.set(root, () => {
     isPlaying = false;
     if (rafHandle !== null) cancelAnimationFrameFn(rafHandle);
     rafHandle = null;
     disposeModelLayer();
+    unsubscribeLocale();
   });
 
   async function finish(
@@ -434,7 +511,9 @@ export function renderBackgroundPreview(
         drawComposition(canvas, plan, selectedElementIndex, hasModelLayer);
       },
     );
+    rowMainSpansByIndex = built.mainSpansByIndex;
     rowStatusSpansByIndex = built.statusSpansByIndex;
+    localeRefreshers.push(refreshAllRowTexts);
     list.appendChild(built.list);
 
     const controls = document.createElement("div");
@@ -476,9 +555,14 @@ function buildList(
   spriteMetaByKey: ReadonlyMap<string, Sprite>,
   animationStatusByElementIndex: ReadonlyMap<number, AnimationFrameStatus>,
   onSelect: (index: number) => void,
-): { list: HTMLElement; statusSpansByIndex: Map<number, HTMLElement> } {
+): {
+  list: HTMLElement;
+  mainSpansByIndex: Map<number, HTMLElement>;
+  statusSpansByIndex: Map<number, HTMLElement>;
+} {
   const list = document.createElement("div");
   list.className = "background-preview__rows";
+  const mainSpansByIndex = new Map<number, HTMLElement>();
   const statusSpansByIndex = new Map<number, HTMLElement>();
 
   elements.forEach((element, index) => {
@@ -487,13 +571,11 @@ function buildList(
     row.className = "background-preview__row";
     row.dataset.elementIndex = String(index);
 
-    const mainText = [
-      element.name || "(unnamed)",
-      element.type,
-      `layer ${element.layerNo}`,
-      `(${element.startX}, ${element.startY})`,
-    ].join(" · ");
-    row.appendChild(document.createTextNode(mainText));
+    const mainSpan = document.createElement("span");
+    mainSpan.className = "background-preview__row-main";
+    mainSpan.textContent = rowSummaryText(element);
+    row.appendChild(mainSpan);
+    mainSpansByIndex.set(index, mainSpan);
 
     const statusLabel = elementStatusLabel(
       element,
@@ -510,7 +592,21 @@ function buildList(
     list.appendChild(row);
   });
 
-  return { list, statusSpansByIndex };
+  return { list, mainSpansByIndex, statusSpansByIndex };
+}
+
+function rowSummaryText(element: BGElement): string {
+  return t(
+    "background.rowSummary",
+    "{{name}} · {{type}} · layer {{layerNo}} · ({{startX}}, {{startY}})",
+    {
+      name: element.name || t("background.unnamed", "(unnamed)"),
+      type: element.type,
+      layerNo: String(element.layerNo),
+      startX: String(element.startX),
+      startY: String(element.startY),
+    },
+  );
 }
 
 function highlightRow(list: HTMLElement, selectedIndex: number): void {

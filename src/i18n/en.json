@@ -1,0 +1,63 @@
+{
+  "app": {
+    "languageLabel": "Language"
+  },
+  "input": {
+    "folderLabel": "Select a stage folder (containing its .def file, e.g. stage.def)",
+    "dropHint": "…or drag and drop a stage folder here",
+    "resetButton": "Choose a different folder",
+    "selectionPrompt": "Which file is the stage?",
+    "candidateGroupLabel": "Candidate stage files",
+    "confirmSelection": "Load selected file",
+    "reading": "Reading…",
+    "readingFile": "Reading {{fileName}}…",
+    "needsSelection": "Found {{count}} possible stage files — pick which one to load.",
+    "success": "Loaded {{fileName}}. Sprite sheet: {{sffFileName}}.",
+    "errorNoFilesDrop": "Couldn't read anything from the dropped folder — your browser may not support folder drag-and-drop here. Try the folder picker button instead.",
+    "errorNoFilesPicker": "This folder is empty — pick a folder that contains the stage's .def file.",
+    "errorNoCandidate": "No .def file found in this folder — expected one like stage.def.",
+    "errorReadFile": "Could not read {{fileName}}: {{message}}",
+    "errorParseFile": "Could not parse {{fileName}}: {{message}}",
+    "errorSpriteNotReferenced": "{{fileName}} doesn't reference a sprite sheet.",
+    "errorSpriteNotFound": "{{fileName}} references \"{{referencedName}}\", but that file wasn't found anywhere in the folder.",
+    "errorSpriteAmbiguous": "{{fileName}} references \"{{referencedName}}\", but {{count}} files in the folder share that name — could not tell which one to use.",
+    "errorSpriteReadFile": "Could not read {{sffFileName}}: {{message}}"
+  },
+  "characteristics": {
+    "unknown": "Unknown",
+    "author": "Author",
+    "cameraBoundsHeading": "Camera Bounds",
+    "stageBoundariesHeading": "Stage Boundaries",
+    "left": "Left",
+    "right": "Right",
+    "high": "High",
+    "low": "Low",
+    "top": "Top",
+    "bottom": "Bottom",
+    "dimension3D": "This is a 3D stage — Top and Bottom bounds apply.",
+    "dimension2D": "This is a 2D stage — Top and Bottom bounds are not used."
+  },
+  "background": {
+    "modeBadge3D": "3D preview — background elements stay screen-fixed",
+    "noElements": "No BG elements configured.",
+    "decodingSprites": "Decoding sprites…",
+    "play": "Play",
+    "pause": "Pause",
+    "unnamed": "(unnamed)",
+    "rowSummary": "{{name}} · {{type}} · layer {{layerNo}} · ({{startX}}, {{startY}})",
+    "statusNoAnimation": "no matching animation block",
+    "statusUnresolvedSprite": "resolved sprite is out of range",
+    "statusInvalidSprite": "invalid sprite reference"
+  },
+  "model": {
+    "unavailableHeading": "3D preview unavailable",
+    "modelNotFound": "The referenced 3D model \"{{referencedName}}\" was not found in the loaded folder.",
+    "modelAmbiguous": "Multiple files named \"{{referencedName}}\" were found in the loaded folder — could not tell which one to use as the 3D model.",
+    "modelReadError": "The 3D model file \"{{fileName}}\" could not be read: {{message}}",
+    "environmentNotFound": "The referenced lighting file \"{{referencedName}}\" was not found in the loaded folder.",
+    "environmentAmbiguous": "Multiple files named \"{{referencedName}}\" were found in the loaded folder — could not tell which one to use for lighting.",
+    "environmentReadError": "The lighting file \"{{fileName}}\" could not be read: {{message}}",
+    "webglUnavailable": "This browser or environment could not create a WebGL renderer for the 3D preview.",
+    "modelLoadError": "The 3D model could not be loaded: {{message}}"
+  }
+}

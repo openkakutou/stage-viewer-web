@@ -13,6 +13,9 @@ library — this repo never reimplements `.def` parsing itself.
 flowchart LR
     app["app\n(src/main.ts)"] --> input["input\n(src/input/)"]
     app --> viewer["viewer\n(src/viewer/)"]
+    app --> i18n["i18n\n(src/i18n/)"]
+    input --> i18n
+    viewer --> i18n
     input --> wasm["wasm\n(src/wasm/)"]
     input -.->|loaded stage + model assets| viewer
     viewer --> wasm
@@ -34,7 +37,14 @@ flowchart LR
   to render the `viewer` module's characteristics panel into a container
   appended right after it. No sidebar/tabs slotted yet —
   `<wuik-app-shell>` collapses empty named slots to zero size with no
-  reserved gutter, so this isn't broken-looking chrome.
+  reserved gutter, so this isn't broken-looking chrome. The toolbar also
+  carries `web-ui-kit`'s `<wuik-locale-switcher>` — see "Localization
+  (i18n)" below.
+- **`i18n`** (`src/i18n/`) — this app's own localization setup (backlog
+  item 008). `i18n.ts` wires the shared `@openkakutou/web-ui-kit` i18next
+  integration layer under this app's own namespace and `localStorage` key,
+  plus a `t(key, defaultValue, vars?)` wrapper every other module calls
+  through. `en.json`/`fr.json` are its message catalogs.
 - **`input`** (`src/input/`) — the stage folder input (backlog item 002).
   `folder-entries.ts` gathers files from a folder selection or a
   drag-and-drop, from either browser entry point, flattening any nested
@@ -233,3 +243,36 @@ to parse never blocks the rest of the stage from loading — it shows its
 own placeholder/error banner in that layer instead, visually distinct
 from both the 2D layer's own sprite-placeholder outline and
 `<wuik-viewport-3d>`'s own "WebGL unsupported" panel.
+
+## Localization (i18n)
+
+Every user-facing string lives in `src/i18n/en.json`/`fr.json`, looked up
+through a small `t(key, defaultValue, vars?)` wrapper
+(`src/i18n/i18n.ts`) around the shared `@openkakutou/web-ui-kit` i18next
+integration layer. `t()` returns the given `defaultValue` verbatim
+whenever this app hasn't called `initI18n` yet (e.g. most of the test
+suite, which never bootstraps i18n) — every call site's `defaultValue`
+matches its English catalog entry exactly, so the rendered text is
+identical either way. `initI18n` runs once, from `main.ts`'s real
+bootstrap, before the very first render.
+
+A `<wuik-locale-switcher>` in the toolbar lists the available languages
+and switches the active one live, with no page reload; the choice
+persists across reloads via a `localStorage` key unique to this app (so
+it doesn't leak into another OpenKakutou app sharing the same GitHub
+Pages origin). How each screen reacts to a live language switch matches
+how much state it owns:
+
+- The characteristics panel carries no state of its own, so it's simply
+  re-rendered from the currently loaded stage data.
+- The stage folder input keeps its currently-shown status/error text as
+  a small structured description rather than a pre-formatted string, and
+  re-formats it in the new language in place.
+- The background preview and 3D model preview own real live state
+  (playback position, the current selection, a mounted `three` renderer)
+  that a full re-render would disrupt — each instead updates only its
+  already-visible text (labels, row summaries, a failure banner) in
+  place, leaving playback and the 3D scene untouched.
+
+See `.vibe/decisions/006-i18n-integration-approach.md` for the full
+reasoning.

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { initAppI18n } from "../i18n/i18n.ts";
 import type { ModelAssetsResolution } from "../input/model-assets.ts";
 import type {
   SpritePixelResult,
@@ -149,6 +150,32 @@ describe("renderBackgroundPreview", () => {
     expect(rows[0]?.textContent).toContain("sky");
     expect(rows[0]?.textContent).toContain("5");
     expect(rows[1]?.textContent).toContain("cloud");
+  });
+
+  it("re-translates the play button and row summary text in place on a live locale change, without resetting playback state", async () => {
+    const root = document.createElement("div");
+    const stage = stageWith([element({ name: "sky" })]);
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+    });
+    await vi.waitFor(() => {
+      expect(root.querySelectorAll(".background-preview__row")).toHaveLength(1);
+    });
+
+    const playButton = root.querySelector<HTMLElement>("wuik-button");
+    expect(playButton?.textContent).toBe("Play");
+
+    const instance = await initAppI18n();
+    await instance.changeLanguage("fr");
+
+    expect(playButton?.textContent).toBe("Lecture");
+    expect(
+      root.querySelector(".background-preview__row-main")?.textContent,
+    ).toBe("sky · normal · calque 0 · (0, 0)");
+
+    await instance.changeLanguage("en");
   });
 
   it("flags a row whose sprite reference is absent from the loaded sheet", async () => {

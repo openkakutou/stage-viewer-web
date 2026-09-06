@@ -9,6 +9,14 @@
 // this app hard-errors, by name, when the referenced sprite sheet can't be
 // resolved, rather than the sibling's silent-if-unresolved sprite step —
 // see .vibe/decisions/001-sprite-sheet-resolved-by-basename-with-case-insensitive-fallback.md.
+//
+// Backlog item 008 (i18n): the currently-displayed status/error text is
+// kept as a small unformatted `StatusDescriptor`, not a pre-formatted
+// string, so a live locale change (see .vibe/decisions/006) can re-format
+// and redisplay it in the new language without re-running the load/parse
+// that produced it — same approach `lifebar-viewer-web` uses for its own
+// long-lived folder-input status text.
+import { onLocaleChange, t } from "../i18n/i18n.ts";
 import type { GatheredFile } from "./folder-entries.ts";
 import {
   type DataTransferItemLike,
@@ -47,10 +55,42 @@ type ErrorResult = Exclude<
   { status: "success" | "needs-selection" }
 >;
 
-function formatSuccessMessage(
-  result: Extract<StageFolderInputResult, { status: "success" }>,
-): string {
-  return `Loaded ${result.fileName}. Sprite sheet: ${result.sffFileName}.`;
+type StatusDescriptor =
+  | { kind: "none" }
+  | { kind: "reading" }
+  | { kind: "readingFile"; fileName: string }
+  | { kind: "success"; fileName: string; sffFileName: string }
+  | { kind: "needsSelection"; count: number }
+  | { kind: "error"; result: ErrorResult; source: "picker" | "drop" };
+
+function formatStatus(descriptor: StatusDescriptor): string {
+  switch (descriptor.kind) {
+    case "none":
+      return "";
+    case "reading":
+      return t("input.reading", "Reading…");
+    case "readingFile":
+      return t("input.readingFile", "Reading {{fileName}}…", {
+        fileName: descriptor.fileName,
+      });
+    case "success":
+      return t(
+        "input.success",
+        "Loaded {{fileName}}. Sprite sheet: {{sffFileName}}.",
+        {
+          fileName: descriptor.fileName,
+          sffFileName: descriptor.sffFileName,
+        },
+      );
+    case "needsSelection":
+      return t(
+        "input.needsSelection",
+        "Found {{count}} possible stage files — pick which one to load.",
+        { count: String(descriptor.count) },
+      );
+    case "error":
+      return formatErrorMessage(descriptor.result, descriptor.source);
+  }
 }
 
 function formatErrorMessage(
@@ -60,24 +100,73 @@ function formatErrorMessage(
   switch (result.status) {
     case "no-files":
       return source === "drop"
-        ? "Couldn't read anything from the dropped folder — your browser may not support folder drag-and-drop here. Try the folder picker button instead."
-        : "This folder is empty — pick a folder that contains the stage's .def file.";
+        ? t(
+            "input.errorNoFilesDrop",
+            "Couldn't read anything from the dropped folder — your browser may not support folder drag-and-drop here. Try the folder picker button instead.",
+          )
+        : t(
+            "input.errorNoFilesPicker",
+            "This folder is empty — pick a folder that contains the stage's .def file.",
+          );
     case "no-candidate":
-      return "No .def file found in this folder — expected one like stage.def.";
+      return t(
+        "input.errorNoCandidate",
+        "No .def file found in this folder — expected one like stage.def.",
+      );
     case "read-error":
-      return `Could not read ${result.fileName}: ${result.message}`;
+      return t(
+        "input.errorReadFile",
+        "Could not read {{fileName}}: {{message}}",
+        {
+          fileName: result.fileName,
+          message: result.message,
+        },
+      );
     case "parse-error":
-      return `Could not parse ${result.fileName}: ${result.message}`;
+      return t(
+        "input.errorParseFile",
+        "Could not parse {{fileName}}: {{message}}",
+        { fileName: result.fileName, message: result.message },
+      );
     case "sprite-not-found":
       return result.referencedName === ""
-        ? `${result.fileName} doesn't reference a sprite sheet.`
-        : `${result.fileName} references "${result.referencedName}", but that file wasn't found anywhere in the folder.`;
+        ? t(
+            "input.errorSpriteNotReferenced",
+            "{{fileName}} doesn't reference a sprite sheet.",
+            { fileName: result.fileName },
+          )
+        : t(
+            "input.errorSpriteNotFound",
+            '{{fileName}} references "{{referencedName}}", but that file wasn\'t found anywhere in the folder.',
+            {
+              fileName: result.fileName,
+              referencedName: result.referencedName,
+            },
+          );
     case "sprite-ambiguous":
-      return `${result.fileName} references "${result.referencedName}", but ${result.candidates.length} files in the folder share that name — could not tell which one to use.`;
+      return t(
+        "input.errorSpriteAmbiguous",
+        '{{fileName}} references "{{referencedName}}", but {{count}} files in the folder share that name — could not tell which one to use.',
+        {
+          fileName: result.fileName,
+          referencedName: result.referencedName,
+          count: String(result.candidates.length),
+        },
+      );
     case "sprite-read-error":
-      return `Could not read ${result.sffFileName}: ${result.message}`;
+      return t(
+        "input.errorSpriteReadFile",
+        "Could not read {{sffFileName}}: {{message}}",
+        { sffFileName: result.sffFileName, message: result.message },
+      );
   }
 }
+
+// Cancels a previous call's live locale-change subscription when
+// `renderStageFileInput` is invoked again on the same root — same
+// "replace, don't accumulate" rule `background-preview.ts`'s own
+// `stopPlaybackByRoot` established for its own render-owned subscription.
+const stopLocaleSubscriptionByRoot = new WeakMap<HTMLElement, () => void>();
 
 /**
  * Renders the folder-based stage input into `root`, replacing its
@@ -87,6 +176,8 @@ export function renderStageFileInput(
   root: HTMLElement,
   options: StageFileInputViewOptions,
 ): void {
+  stopLocaleSubscriptionByRoot.get(root)?.();
+  stopLocaleSubscriptionByRoot.delete(root);
   root.replaceChildren();
 
   const fileOptions: StageFolderInputOptions = {
@@ -95,7 +186,7 @@ export function renderStageFileInput(
   };
 
   let phase: Phase = "idle";
-  let statusMessage = "";
+  let currentStatus: StatusDescriptor = { kind: "none" };
   let isError = false;
   let lastSource: "picker" | "drop" = "picker";
   let selectedIndex: number | null = null;
@@ -110,8 +201,6 @@ export function renderStageFileInput(
   const label = document.createElement("label");
   label.className = "stage-file-input__label";
   label.htmlFor = "stage-folder-picker";
-  label.textContent =
-    "Select a stage folder (containing its .def file, e.g. stage.def)";
 
   const picker = document.createElement("input");
   picker.type = "file";
@@ -121,7 +210,6 @@ export function renderStageFileInput(
 
   const hint = document.createElement("p");
   hint.className = "stage-file-input__hint";
-  hint.textContent = "…or drag and drop a stage folder here";
 
   dropZone.append(label, picker, hint);
 
@@ -138,11 +226,47 @@ export function renderStageFileInput(
   resetButton.type = "button";
   resetButton.className = "stage-file-input__reset";
   resetButton.dataset.action = "reset";
-  resetButton.textContent = "Choose a different folder";
   resetButton.hidden = true;
 
   panel.append(dropZone, selectionContainer, status, resetButton);
   root.appendChild(panel);
+
+  // Elements created by `renderSelection`, kept for a live locale change to
+  // update their text in place without rebuilding the list itself (which
+  // would drop the user's in-progress radio selection).
+  let selectionPrompt: HTMLElement | null = null;
+  let selectionGroup: HTMLElement | null = null;
+  let selectionConfirmButton: HTMLButtonElement | null = null;
+
+  function renderStaticTexts(): void {
+    label.textContent = t(
+      "input.folderLabel",
+      "Select a stage folder (containing its .def file, e.g. stage.def)",
+    );
+    hint.textContent = t(
+      "input.dropHint",
+      "…or drag and drop a stage folder here",
+    );
+    resetButton.textContent = t(
+      "input.resetButton",
+      "Choose a different folder",
+    );
+    selectionPrompt?.replaceChildren(
+      document.createTextNode(
+        t("input.selectionPrompt", "Which file is the stage?"),
+      ),
+    );
+    selectionGroup?.setAttribute(
+      "aria-label",
+      t("input.candidateGroupLabel", "Candidate stage files"),
+    );
+    if (selectionConfirmButton) {
+      selectionConfirmButton.textContent = t(
+        "input.confirmSelection",
+        "Load selected file",
+      );
+    }
+  }
 
   function render(): void {
     picker.disabled = phase === "loading";
@@ -151,18 +275,21 @@ export function renderStageFileInput(
       phase === "loading",
     );
     status.classList.toggle("stage-file-input__status--error", isError);
-    status.textContent = statusMessage;
+    status.textContent = formatStatus(currentStatus);
     resetButton.hidden = phase === "idle" || phase === "loading";
     selectionContainer.hidden = phase !== "needs-selection";
   }
 
   function resetToIdle(): void {
     phase = "idle";
-    statusMessage = "";
+    currentStatus = { kind: "none" };
     isError = false;
     selectedIndex = null;
     picker.value = "";
     selectionContainer.replaceChildren();
+    selectionPrompt = null;
+    selectionGroup = null;
+    selectionConfirmButton = null;
     render();
   }
 
@@ -171,17 +298,26 @@ export function renderStageFileInput(
     selectedIndex = null;
 
     const prompt = document.createElement("p");
-    prompt.textContent = "Which file is the stage?";
+    prompt.textContent = t("input.selectionPrompt", "Which file is the stage?");
+    selectionPrompt = prompt;
 
     const group = document.createElement("div");
     group.setAttribute("role", "radiogroup");
-    group.setAttribute("aria-label", "Candidate stage files");
+    group.setAttribute(
+      "aria-label",
+      t("input.candidateGroupLabel", "Candidate stage files"),
+    );
+    selectionGroup = group;
 
     const confirmButton = document.createElement("button");
     confirmButton.type = "button";
     confirmButton.dataset.action = "confirm-selection";
-    confirmButton.textContent = "Load selected file";
+    confirmButton.textContent = t(
+      "input.confirmSelection",
+      "Load selected file",
+    );
     confirmButton.disabled = true;
+    selectionConfirmButton = confirmButton;
 
     candidates.forEach((candidate, index) => {
       const optionLabel = document.createElement("label");
@@ -209,7 +345,7 @@ export function renderStageFileInput(
       if (selectedIndex === null) return;
       const chosen = candidates[selectedIndex];
       phase = "loading";
-      statusMessage = `Reading ${chosen.file.name}…`;
+      currentStatus = { kind: "readingFile", fileName: chosen.file.name };
       isError = false;
       render();
       void finishLoading(
@@ -228,7 +364,11 @@ export function renderStageFileInput(
     if (result.status === "success") {
       phase = "done";
       isError = false;
-      statusMessage = formatSuccessMessage(result);
+      currentStatus = {
+        kind: "success",
+        fileName: result.fileName,
+        sffFileName: result.sffFileName,
+      };
       render();
       options.onLoaded(result);
       return;
@@ -237,7 +377,10 @@ export function renderStageFileInput(
     if (result.status === "needs-selection") {
       phase = "needs-selection";
       isError = false;
-      statusMessage = `Found ${result.candidates.length} possible stage files — pick which one to load.`;
+      currentStatus = {
+        kind: "needsSelection",
+        count: result.candidates.length,
+      };
       renderSelection(result.candidates);
       render();
       return;
@@ -245,7 +388,7 @@ export function renderStageFileInput(
 
     phase = "done";
     isError = true;
-    statusMessage = formatErrorMessage(result, lastSource);
+    currentStatus = { kind: "error", result, source: lastSource };
     render();
   }
 
@@ -256,9 +399,12 @@ export function renderStageFileInput(
     lastSource = source;
     lastGatheredFiles = files;
     phase = "loading";
-    statusMessage = "Reading…";
+    currentStatus = { kind: "reading" };
     isError = false;
     selectionContainer.replaceChildren();
+    selectionPrompt = null;
+    selectionGroup = null;
+    selectionConfirmButton = null;
     render();
     void finishLoading(loadStageFromFolderFiles(files, fileOptions));
   }
@@ -292,5 +438,18 @@ export function renderStageFileInput(
     );
   });
 
+  renderStaticTexts();
   render();
+
+  // Live locale switching (backlog item 008): re-formats the currently
+  // displayed status/error text from its stored descriptor, plus every
+  // static label/hint/button text, in the new language — no reload, no
+  // loss of the current phase/selection state.
+  stopLocaleSubscriptionByRoot.set(
+    root,
+    onLocaleChange(() => {
+      renderStaticTexts();
+      render();
+    }),
+  );
 }

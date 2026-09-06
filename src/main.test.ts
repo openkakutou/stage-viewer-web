@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { initAppI18n } from "./i18n/i18n.ts";
 import { renderApp } from "./main.ts";
 
 describe("renderApp", () => {
@@ -54,5 +55,35 @@ describe("renderApp", () => {
     expect(root.querySelector('[slot="toolbar"]')?.textContent).toBe(
       "Stage Viewer — v",
     );
+  });
+
+  it("renders a locale switcher in the toolbar, labelled for accessibility", () => {
+    const root = document.createElement("div");
+
+    renderApp(root, "0.1.0");
+
+    const switcher = root.querySelector("wuik-locale-switcher");
+    expect(switcher).not.toBeNull();
+    expect(switcher?.getAttribute("label")).toBe("Language");
+    // Shadow-DOM content never contributes to the host's own light-DOM
+    // textContent, so the toolbar's exact-text assertions above are
+    // unaffected by the switcher living inside it.
+    expect(root.querySelector('[slot="toolbar"]')?.contains(switcher)).toBe(
+      true,
+    );
+  });
+
+  it("re-translates the locale switcher's label on a live locale change", async () => {
+    const instance = await initAppI18n();
+    await instance.changeLanguage("en");
+    const root = document.createElement("div");
+    renderApp(root, "0.1.0");
+
+    await instance.changeLanguage("fr");
+
+    const switcher = root.querySelector("wuik-locale-switcher");
+    expect(switcher?.getAttribute("label")).toBe("Langue");
+
+    await instance.changeLanguage("en");
   });
 });

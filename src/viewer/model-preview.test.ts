@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { initAppI18n } from "../i18n/i18n.ts";
 import type { ModelAssetsResolution } from "../input/model-assets.ts";
 import type { BGdef, Model, StageData } from "../wasm/types.ts";
 import { renderModelPreview } from "./model-preview.ts";
@@ -163,6 +164,30 @@ describe("renderModelPreview — asset resolution failures", () => {
       expect(banner?.textContent?.length ?? 0).toBeGreaterThan(0);
     });
   }
+
+  it("re-translates an already-shown failure banner in place on a live locale change", async () => {
+    const root = document.createElement("div");
+    renderModelPreview(
+      root,
+      stage({ bgDef: bgDef({ modelFile: "mystage.glb" }) }),
+      { status: "model-not-found", referencedName: "mystage.glb" },
+    );
+    expect(
+      root.querySelector(".model-preview__error-heading")?.textContent,
+    ).toBe("3D preview unavailable");
+
+    const instance = await initAppI18n();
+    await instance.changeLanguage("fr");
+
+    expect(
+      root.querySelector(".model-preview__error-heading")?.textContent,
+    ).toBe("Aperçu 3D indisponible");
+    expect(
+      root.querySelector(".model-preview__error-body")?.textContent,
+    ).toContain("introuvable");
+
+    await instance.changeLanguage("en");
+  });
 });
 
 describe("renderModelPreview — success path", () => {

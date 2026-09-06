@@ -11,6 +11,7 @@
 // case) never pays the cost of downloading or evaluating this module's
 // heaviest dependency at all.
 import type * as THREE from "three";
+import { onLocaleChange, t } from "../i18n/i18n.ts";
 import type { ModelAssetsResolution } from "../input/model-assets.ts";
 import type { StageData } from "../wasm/types.ts";
 import { resolveCameraParams, resolveModelTransform } from "./model-camera.ts";
@@ -148,17 +149,41 @@ function describeAssetFailure(
 ): string {
   switch (resolution.status) {
     case "model-not-found":
-      return `The referenced 3D model "${resolution.referencedName}" was not found in the loaded folder.`;
+      return t(
+        "model.modelNotFound",
+        'The referenced 3D model "{{referencedName}}" was not found in the loaded folder.',
+        { referencedName: resolution.referencedName },
+      );
     case "model-ambiguous":
-      return `Multiple files named "${resolution.referencedName}" were found in the loaded folder — could not tell which one to use as the 3D model.`;
+      return t(
+        "model.modelAmbiguous",
+        'Multiple files named "{{referencedName}}" were found in the loaded folder — could not tell which one to use as the 3D model.',
+        { referencedName: resolution.referencedName },
+      );
     case "model-read-error":
-      return `The 3D model file "${resolution.fileName}" could not be read: ${resolution.message}`;
+      return t(
+        "model.modelReadError",
+        'The 3D model file "{{fileName}}" could not be read: {{message}}',
+        { fileName: resolution.fileName, message: resolution.message },
+      );
     case "environment-not-found":
-      return `The referenced lighting file "${resolution.referencedName}" was not found in the loaded folder.`;
+      return t(
+        "model.environmentNotFound",
+        'The referenced lighting file "{{referencedName}}" was not found in the loaded folder.',
+        { referencedName: resolution.referencedName },
+      );
     case "environment-ambiguous":
-      return `Multiple files named "${resolution.referencedName}" were found in the loaded folder — could not tell which one to use for lighting.`;
+      return t(
+        "model.environmentAmbiguous",
+        'Multiple files named "{{referencedName}}" were found in the loaded folder — could not tell which one to use for lighting.',
+        { referencedName: resolution.referencedName },
+      );
     case "environment-read-error":
-      return `The lighting file "${resolution.fileName}" could not be read: ${resolution.message}`;
+      return t(
+        "model.environmentReadError",
+        'The lighting file "{{fileName}}" could not be read: {{message}}',
+        { fileName: resolution.fileName, message: resolution.message },
+      );
   }
 }
 
@@ -168,7 +193,7 @@ function buildFailureBanner(bodyText: string): HTMLElement {
   banner.setAttribute("role", "status");
   const heading = document.createElement("p");
   heading.className = "model-preview__error-heading";
-  heading.textContent = "3D preview unavailable";
+  heading.textContent = t("model.unavailableHeading", "3D preview unavailable");
   const body = document.createElement("p");
   body.className = "model-preview__error-body";
   body.textContent = bodyText;
@@ -197,8 +222,23 @@ export function renderModelPreview(
     return;
   }
 
+  // Live locale switching (backlog item 008): whenever a failure banner is
+  // showing, `currentFailureReason` recomputes its body text (re-running
+  // the same describe function, which reads the active locale itself via
+  // `t()`) and the whole banner is rebuilt — cheap, since it carries no
+  // state of its own, unlike the three.js setup below. Stays `null` (a
+  // no-op locale change) whenever no banner is shown.
+  let currentFailureReason: (() => string) | null = null;
+  const unsubscribeLocale = onLocaleChange(() => {
+    if (currentFailureReason) {
+      root.replaceChildren(buildFailureBanner(currentFailureReason()));
+    }
+  });
+
   if (modelAssets.status !== "success") {
-    root.appendChild(buildFailureBanner(describeAssetFailure(modelAssets)));
+    currentFailureReason = () => describeAssetFailure(modelAssets);
+    root.appendChild(buildFailureBanner(currentFailureReason()));
+    stopByRoot.set(root, unsubscribeLocale);
     return;
   }
 
@@ -234,6 +274,7 @@ export function renderModelPreview(
     if (rafHandle !== null) cancelAnimationFrameFn(rafHandle);
     resizeObserver?.disconnect();
     renderer?.dispose();
+    unsubscribeLocale();
   });
 
   function requestRender(): void {
@@ -282,11 +323,12 @@ export function renderModelPreview(
     const createdRenderer =
       rendererOutcome.status === "fulfilled" ? rendererOutcome.value : null;
     if (!createdRenderer) {
-      root.replaceChildren(
-        buildFailureBanner(
+      currentFailureReason = () =>
+        t(
+          "model.webglUnavailable",
           "This browser or environment could not create a WebGL renderer for the 3D preview.",
-        ),
-      );
+        );
+      root.replaceChildren(buildFailureBanner(currentFailureReason()));
       return;
     }
     renderer = createdRenderer;
@@ -294,15 +336,19 @@ export function renderModelPreview(
     if (gltfOutcome.status === "rejected") {
       renderer.dispose();
       renderer = null;
-      root.replaceChildren(
-        buildFailureBanner(
-          `The 3D model could not be loaded: ${
-            gltfOutcome.reason instanceof Error
-              ? gltfOutcome.reason.message
-              : String(gltfOutcome.reason)
-          }`,
-        ),
-      );
+      const gltfMessage =
+        gltfOutcome.reason instanceof Error
+          ? gltfOutcome.reason.message
+          : String(gltfOutcome.reason);
+      currentFailureReason = () =>
+        t(
+          "model.modelLoadError",
+          "The 3D model could not be loaded: {{message}}",
+          {
+            message: gltfMessage,
+          },
+        );
+      root.replaceChildren(buildFailureBanner(currentFailureReason()));
       return;
     }
     const model = gltfOutcome.value;

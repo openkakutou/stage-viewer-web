@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Users can now switch the app's language (English or French) live from a selector in the toolbar, with no page reload — every screen's text updates immediately, including a currently-shown loaded stage, error message, or in-progress playback, which keeps running uninterrupted. The chosen language is remembered the next time the app is opened.
+
 ## [0.7.0] - 2026-09-02
 
 ### Added

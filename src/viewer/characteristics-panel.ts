@@ -14,9 +14,12 @@
 // `bgDef.modelFile`, the same source of truth `stage` itself uses — never
 // from the boundary values being zero) — see
 // .vibe/decisions/002-stage-boundaries-shown-unconditionally-with-dimension-note.md.
+import { t } from "../i18n/i18n.ts";
 import type { StageData } from "../wasm/types.ts";
 
-const UNKNOWN = "Unknown";
+function unknownLabel(): string {
+  return t("characteristics.unknown", "Unknown");
+}
 
 export function renderCharacteristicsPanel(
   root: HTMLElement,
@@ -30,40 +33,54 @@ export function renderCharacteristicsPanel(
 
   const name = document.createElement("h2");
   name.className = "characteristics-panel__name";
-  name.textContent = stage.name || UNKNOWN;
+  name.textContent = stage.name || unknownLabel();
 
   const identity = document.createElement("dl");
   identity.className = "characteristics-panel__author";
-  identity.appendChild(buildStat("Author", stage.author || UNKNOWN));
+  identity.appendChild(
+    buildStat(
+      t("characteristics.author", "Author"),
+      stage.author || unknownLabel(),
+    ),
+  );
 
   const is3D = stage.bgDef.modelFile !== "";
 
   const cameraSection = buildBoundsSection(
-    "Camera Bounds",
+    t("characteristics.cameraBoundsHeading", "Camera Bounds"),
     "characteristics-panel__camera-bounds",
     [
-      ["Left", stage.cameraBounds.left],
-      ["Right", stage.cameraBounds.right],
-      ["High", stage.cameraBounds.high],
-      ["Low", stage.cameraBounds.low],
+      [t("characteristics.left", "Left"), stage.cameraBounds.left],
+      [t("characteristics.right", "Right"), stage.cameraBounds.right],
+      [t("characteristics.high", "High"), stage.cameraBounds.high],
+      [t("characteristics.low", "Low"), stage.cameraBounds.low],
     ],
   );
 
   const boundariesSection = buildBoundsSection(
-    "Stage Boundaries",
+    t("characteristics.stageBoundariesHeading", "Stage Boundaries"),
     "characteristics-panel__stage-boundaries",
     [
-      ["Left", stage.stageBoundaries.left],
-      ["Right", stage.stageBoundaries.right],
-      ["Top", stage.stageBoundaries.topBound],
-      ["Bottom", stage.stageBoundaries.bottomBound],
+      [t("characteristics.left", "Left"), stage.stageBoundaries.left],
+      [t("characteristics.right", "Right"), stage.stageBoundaries.right],
+      [t("characteristics.top", "Top"), stage.stageBoundaries.topBound],
+      [
+        t("characteristics.bottom", "Bottom"),
+        stage.stageBoundaries.bottomBound,
+      ],
     ],
   );
   const dimension = document.createElement("p");
   dimension.className = "characteristics-panel__dimension";
   dimension.textContent = is3D
-    ? "This is a 3D stage — Top and Bottom bounds apply."
-    : "This is a 2D stage — Top and Bottom bounds are not used.";
+    ? t(
+        "characteristics.dimension3D",
+        "This is a 3D stage — Top and Bottom bounds apply.",
+      )
+    : t(
+        "characteristics.dimension2D",
+        "This is a 2D stage — Top and Bottom bounds are not used.",
+      );
   boundariesSection.appendChild(dimension);
 
   panel.append(name, identity, cameraSection, boundariesSection);

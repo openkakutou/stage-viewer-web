@@ -248,6 +248,19 @@ Backlog item 006: the outcome of resolving (and reading) a 3D model-based stage'
 | model-read-error / environment-read-error | `fileName: string`, `message: string` |
 Defined in: `src/input/model-assets.ts`
 
+## StatusDescriptor
+Backlog item 008: the stage folder input's currently-shown status/error, kept as this small unformatted description rather than a pre-formatted string, so a live locale change can re-format and redisplay it in the new language without re-running the load/parse that produced it.
+
+| Variant | Fields |
+|---|---|
+| none | (none) |
+| reading | (none) — a folder was just gathered, not yet resolved to a specific file |
+| readingFile | `fileName: string` — a specific candidate was chosen and is now loading |
+| success | `fileName: string`, `sffFileName: string` |
+| needsSelection | `count: number` |
+| error | `result: ErrorResult`, `source: "picker" \| "drop"` |
+Defined in: `src/input/stage-file-input-view.ts`
+
 ## StageFolderInputResult
 The end-to-end result of loading a stage from a folder: candidate resolution passthrough, plus the stage-load and sprite-sheet-resolution outcomes.
 

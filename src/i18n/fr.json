@@ -1,0 +1,63 @@
+{
+  "app": {
+    "languageLabel": "Langue"
+  },
+  "input": {
+    "folderLabel": "Sélectionnez un dossier de stage (contenant son fichier .def, par ex. stage.def)",
+    "dropHint": "…ou glissez-déposez un dossier de stage ici",
+    "resetButton": "Choisir un autre dossier",
+    "selectionPrompt": "Quel fichier est le stage ?",
+    "candidateGroupLabel": "Fichiers de stage candidats",
+    "confirmSelection": "Charger le fichier sélectionné",
+    "reading": "Lecture…",
+    "readingFile": "Lecture de {{fileName}}…",
+    "needsSelection": "{{count}} fichiers de stage possibles trouvés — choisissez lequel charger.",
+    "success": "{{fileName}} chargé. Feuille de sprites : {{sffFileName}}.",
+    "errorNoFilesDrop": "Impossible de lire le dossier déposé — votre navigateur ne prend peut-être pas en charge le glisser-déposer de dossiers ici. Essayez plutôt le bouton du sélecteur de dossier.",
+    "errorNoFilesPicker": "Ce dossier est vide — choisissez un dossier contenant le fichier .def du stage.",
+    "errorNoCandidate": "Aucun fichier .def trouvé dans ce dossier — un fichier comme stage.def est attendu.",
+    "errorReadFile": "Impossible de lire {{fileName}} : {{message}}",
+    "errorParseFile": "Impossible d'analyser {{fileName}} : {{message}}",
+    "errorSpriteNotReferenced": "{{fileName}} ne référence aucune feuille de sprites.",
+    "errorSpriteNotFound": "{{fileName}} référence « {{referencedName}} », mais ce fichier est introuvable dans le dossier.",
+    "errorSpriteAmbiguous": "{{fileName}} référence « {{referencedName}} », mais {{count}} fichiers du dossier partagent ce nom — impossible de déterminer lequel utiliser.",
+    "errorSpriteReadFile": "Impossible de lire {{sffFileName}} : {{message}}"
+  },
+  "characteristics": {
+    "unknown": "Inconnu",
+    "author": "Auteur",
+    "cameraBoundsHeading": "Limites de la caméra",
+    "stageBoundariesHeading": "Limites du stage",
+    "left": "Gauche",
+    "right": "Droite",
+    "high": "Haut",
+    "low": "Bas",
+    "top": "Haut",
+    "bottom": "Bas",
+    "dimension3D": "Ce stage est en 3D — les limites Haut et Bas s'appliquent.",
+    "dimension2D": "Ce stage est en 2D — les limites Haut et Bas ne sont pas utilisées."
+  },
+  "background": {
+    "modeBadge3D": "Aperçu 3D — les éléments d'arrière-plan restent fixes à l'écran",
+    "noElements": "Aucun élément d'arrière-plan configuré.",
+    "decodingSprites": "Décodage des sprites…",
+    "play": "Lecture",
+    "pause": "Pause",
+    "unnamed": "(sans nom)",
+    "rowSummary": "{{name}} · {{type}} · calque {{layerNo}} · ({{startX}}, {{startY}})",
+    "statusNoAnimation": "aucun bloc d'animation correspondant",
+    "statusUnresolvedSprite": "le sprite résolu est hors limites",
+    "statusInvalidSprite": "référence de sprite invalide"
+  },
+  "model": {
+    "unavailableHeading": "Aperçu 3D indisponible",
+    "modelNotFound": "Le modèle 3D référencé « {{referencedName}} » est introuvable dans le dossier chargé.",
+    "modelAmbiguous": "Plusieurs fichiers nommés « {{referencedName}} » ont été trouvés dans le dossier chargé — impossible de déterminer lequel utiliser comme modèle 3D.",
+    "modelReadError": "Le fichier de modèle 3D « {{fileName}} » n'a pas pu être lu : {{message}}",
+    "environmentNotFound": "Le fichier d'éclairage référencé « {{referencedName}} » est introuvable dans le dossier chargé.",
+    "environmentAmbiguous": "Plusieurs fichiers nommés « {{referencedName}} » ont été trouvés dans le dossier chargé — impossible de déterminer lequel utiliser pour l'éclairage.",
+    "environmentReadError": "Le fichier d'éclairage « {{fileName}} » n'a pas pu être lu : {{message}}",
+    "webglUnavailable": "Ce navigateur ou cet environnement n'a pas pu créer de rendu WebGL pour l'aperçu 3D.",
+    "modelLoadError": "Le modèle 3D n'a pas pu être chargé : {{message}}"
+  }
+}

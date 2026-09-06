@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { initAppI18n } from "../i18n/i18n.ts";
 import { resetWasmBridgeForTests } from "../wasm/bridge.ts";
 import type { WasmBridgeOptions } from "../wasm/bridge.ts";
 import { renderStageFileInput } from "./stage-file-input-view.ts";
@@ -247,4 +248,29 @@ describe("renderStageFileInput", () => {
       status(root).classList.contains("stage-file-input__status--error"),
     ).toBe(false);
   });
+
+  it("re-renders an already-shown error message in the new language on a live locale change", async () => {
+    await initAppI18n();
+    const root = document.createElement("div");
+    renderStageFileInput(root, {
+      onLoaded: vi.fn(),
+      bridgeOptions: testBridgeOptions,
+    });
+
+    await selectViaPicker(root, [
+      withRelativePath(makeFile("readme.txt"), "pack/readme.txt"),
+    ]);
+    expect(status(root).textContent).toContain(".def file found");
+
+    const instance = await initAppI18n();
+    await instance.changeLanguage("fr");
+    expect(status(root).textContent).toContain(".def trouvé");
+    expect(label(root).textContent).toContain("Sélectionnez");
+
+    await instance.changeLanguage("en");
+  });
 });
+
+function label(root: HTMLElement): HTMLLabelElement {
+  return root.querySelector(".stage-file-input__label") as HTMLLabelElement;
+}
