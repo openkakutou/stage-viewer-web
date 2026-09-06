@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-07
+
 ### Added
 
 - Users can now switch the app's language (English or French) live from a selector in the toolbar, with no page reload — every screen's text updates immediately, including a currently-shown loaded stage, error message, or in-progress playback, which keeps running uninterrupted. The chosen language is remembered the next time the app is opened.
@@ -47,7 +49,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The app now uses the shared OpenKakutou design system for its layout and visual style, and can load a stage file (background, camera, and layer data) through the underlying stage library — the on-screen file loading and preview screens themselves come in later updates.
 
-[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.4.0...v0.5.0
