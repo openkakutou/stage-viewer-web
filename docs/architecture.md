@@ -178,6 +178,23 @@ decodes every distinct sprite reference in the composition at once,
 rather than one call per element, including every frame's sprite an
 `"anim"` element's matching animation might show.
 
+A stage authored at a higher resolution than its own local coordinate
+space (e.g. `Dengeki_Subway`) declares `[StageInfo]` `xscale`/`yscale`
+to be scaled back down at draw time — `resolveBgScale` (backlog item
+009) reads `BGdef.xScale`/`yScale` and falls back to `1` on `stage`'s
+documented zero-value landmine (unset when `[StageInfo]` is absent),
+the same guarded-default idiom `model-camera.ts`'s `resolveCameraParams`
+already uses for `[Camera]`. `buildDrawPlan` applies that factor to
+every element's position, axis offset, and drawn size — a stage with no
+such scaling (the common case, factor `1`) renders exactly as before.
+Because a decoded sprite's own pixel buffer can't be resampled by this
+math layer, `DrawCommand` carries the *scaled* draw size (`width`/
+`height`) separately from the *native* decoded size (`pixelWidth`/
+`pixelHeight`); `background-preview.ts` only takes the
+offscreen-canvas-plus-`drawImage` scaling path when the two actually
+differ, leaving the pre-existing unscaled `putImageData` output
+byte-for-byte untouched otherwise.
+
 ## Animated BG playback
 
 Every element's drawn position is offset by a simulated camera
