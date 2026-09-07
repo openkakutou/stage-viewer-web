@@ -28,6 +28,8 @@ function bgDef(overrides: Partial<BGdef> = {}): BGdef {
     far: 1000,
     fov: 45,
     yShift: 0,
+    xScale: 1,
+    yScale: 1,
     ...overrides,
   };
 }

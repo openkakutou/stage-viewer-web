@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed the background preview showing one oversized, cropped fragment with everything else off-canvas for a stage authored at a higher resolution than its own coordinate space and scaled back down for display (e.g. `Dengeki_Subway`). Every background element and sprite is now drawn at its correctly scaled size and position, matching how the stage is meant to look. A stage that doesn't use this scaling renders exactly as before.
+
 ## [0.8.0] - 2026-09-07
 
 ### Added

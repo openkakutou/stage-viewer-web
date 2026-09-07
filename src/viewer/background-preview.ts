@@ -318,6 +318,7 @@ export function renderBackgroundPreview(
       loadedStage.bgDef.localCoordWidth,
       { x: playbackState.cameraX, y: 0 },
       animationStatusByElementIndex,
+      { x: loadedStage.bgDef.xScale, y: loadedStage.bgDef.yScale },
     );
     drawComposition(canvas, plan, selectedElementIndex, hasModelLayer);
   }
@@ -666,15 +667,7 @@ export function defaultDrawComposition(
 
   for (const command of plan) {
     if (command.kind === "sprite") {
-      ctx.putImageData(
-        new ImageData(
-          new Uint8ClampedArray(command.pixels),
-          command.width,
-          command.height,
-        ),
-        command.x,
-        command.y,
-      );
+      drawSprite(ctx, command);
     } else {
       drawPlaceholder(ctx, command);
     }
@@ -682,6 +675,52 @@ export function defaultDrawComposition(
 
   const selected = plan.find((c) => c.elementIndex === selectedElementIndex);
   if (selected) drawSelectionOutline(ctx, selected);
+}
+
+/**
+ * Draws a resolved sprite command's decoded pixels onto `ctx`. When its
+ * drawn size (`width`/`height`, already scaled by the stage's `xScale`/
+ * `yScale` per backlog item 009) matches the buffer's own native size
+ * (`pixelWidth`/`pixelHeight` — the default, unscaled case) this draws
+ * exactly as before: a direct `putImageData` blit, byte-for-byte identical
+ * to pre-item-009 output. Only when the drawn size actually differs does
+ * this go through an offscreen canvas so `drawImage` can resample the
+ * buffer to the scaled size — `putImageData` itself has no scaling
+ * capability. `imageSmoothingEnabled = false` keeps pixel-art sprites
+ * crisp under a non-1:1 scale rather than blurred by bilinear filtering.
+ */
+function drawSprite(
+  ctx: CanvasRenderingContext2D,
+  command: Extract<DrawCommand, { kind: "sprite" }>,
+): void {
+  const imageData = new ImageData(
+    new Uint8ClampedArray(command.pixels),
+    command.pixelWidth,
+    command.pixelHeight,
+  );
+
+  if (
+    command.width === command.pixelWidth &&
+    command.height === command.pixelHeight
+  ) {
+    ctx.putImageData(imageData, command.x, command.y);
+    return;
+  }
+
+  const source = document.createElement("canvas");
+  source.width = command.pixelWidth;
+  source.height = command.pixelHeight;
+  const sourceCtx = source.getContext("2d");
+  // No `canvas` npm package under this project's pinned jsdom (see
+  // docs/testing.md) — a real browser always provides this context; the
+  // scaled draw path is verified there, not in this project's unit tests.
+  if (!sourceCtx) return;
+  sourceCtx.putImageData(imageData, 0, 0);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(source, command.x, command.y, command.width, command.height);
+  ctx.restore();
 }
 
 function drawPlaceholder(

@@ -26,6 +26,7 @@ Defined in: `src/wasm/types.ts`
 | zoomOut, zoomIn | number | Camera's zoom scale range |
 | modelFile | string | Path to a 3D model file — Ikemen GO extension, empty for a 2D stage |
 | near, far, fov, yShift | number | 3D-only camera settings |
+| xScale, yScale | number | Factor applied when drawing this stage's 2D BG element sprites (backlog item 009) — lets a stage author sprite art at a resolution other than `localCoordWidth`/`localCoordHeight`. Default `1` when `[StageInfo]` is present but omits them; a `.def` with no `[StageInfo]` section at all leaves both at the raw `0` — consumers resolve through `background-composition.ts`'s `resolveBgScale`, never this raw value directly |
 Defined in: `src/wasm/types.ts`
 
 ## BGElement

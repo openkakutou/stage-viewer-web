@@ -27,6 +27,19 @@ export interface BGdef {
   far: number;
   fov: number;
   yShift: number;
+  /**
+   * Horizontal/vertical factor applied when drawing this stage's 2D BG
+   * element sprites (`.def` `[StageInfo]` `xscale`/`yscale`, backlog item
+   * 009) — lets a stage author sprite art at a resolution other than
+   * `localCoordWidth`/`localCoordHeight` and scale it down (or up) at draw
+   * time. `stage` defaults both to `1` (no scaling) when `[StageInfo]` is
+   * present but omits them; a `.def` with no `[StageInfo]` section at all
+   * leaves both at the Go zero value `0` instead (see `stage`'s
+   * `.vibe/decisions/009`) — consumers apply `resolveBgScale` (see
+   * `background-composition.ts`) rather than this raw value directly.
+   */
+  xScale: number;
+  yScale: number;
 }
 
 /** One displayed frame within a `BGAnimation`: which sprite to show and how long (in ticks) to hold it. */

@@ -18,6 +18,8 @@ function stageWith(overrides: Partial<StageData> = {}): StageData {
       far: 0,
       fov: 0,
       yShift: 0,
+      xScale: 1,
+      yScale: 1,
     },
     elements: null,
     animations: null,

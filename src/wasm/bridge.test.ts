@@ -49,6 +49,10 @@ describe("loadStage", () => {
     expect(result.stage.bgDef.spriteFile).toBe("stage0.sff");
     expect(result.stage.bgDef.zOffset).toBe(220);
     expect(result.stage.elements).toHaveLength(3);
+    // backlog item 009: the fixture's [StageInfo] section omits xscale/
+    // yscale, so the real module defaults both to 1 (no scaling).
+    expect(result.stage.bgDef.xScale).toBe(1);
+    expect(result.stage.bgDef.yScale).toBe(1);
   });
 
   it("maps every JSON field of a non-trivial BG element to its typed shape", async () => {

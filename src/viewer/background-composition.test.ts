@@ -11,6 +11,7 @@ import {
   classifyAnimationElements,
   collectSpriteRequests,
   computeSpriteTopLeft,
+  resolveBgScale,
   resolveParallaxPosition,
   sortElementsForComposition,
   spriteRequestKey,
@@ -394,6 +395,8 @@ describe("buildDrawPlan", () => {
         y: 20 - 5,
         width: 40,
         height: 20,
+        pixelWidth: 40,
+        pixelHeight: 20,
         pixels: pixels.get(spriteRequestKey(0, 0))?.pixels,
       },
     ]);
@@ -559,6 +562,8 @@ describe("buildDrawPlan", () => {
         y: 20 - 5,
         width: 40,
         height: 20,
+        pixelWidth: 40,
+        pixelHeight: 20,
         pixels: pixels.get(spriteRequestKey(3, 1))?.pixels,
       },
     ]);
@@ -650,5 +655,227 @@ describe("buildDrawPlan", () => {
       x: stageXToCanvasX(10, localCoordWidth),
       y: 20,
     });
+  });
+
+  it("scales a normal element's position, axis offset, and drawn size by the stage's xScale/yScale, keeping the native pixel size unchanged", () => {
+    const el = element({
+      type: "normal",
+      startX: 100,
+      startY: 50,
+      sprite: { group: 0, image: 0 },
+    });
+    const meta = new Map([
+      [
+        spriteRequestKey(0, 0),
+        sprite({ axisX: 10, axisY: 10, width: 40, height: 20 }),
+      ],
+    ]);
+    const pixels = new Map([
+      [
+        spriteRequestKey(0, 0),
+        { pixels: new Uint8Array(40 * 20 * 4), width: 40, height: 20 },
+      ],
+    ]);
+
+    const plan = buildDrawPlan(
+      [el],
+      meta,
+      pixels,
+      localCoordWidth,
+      { x: 0, y: 0 },
+      new Map(),
+      { x: 0.5, y: 0.25 },
+    );
+
+    expect(plan).toEqual([
+      {
+        kind: "sprite",
+        elementIndex: 0,
+        x: stageXToCanvasX(100 * 0.5 - 10 * 0.5, localCoordWidth),
+        y: 50 * 0.25 - 10 * 0.25,
+        width: 40 * 0.5,
+        height: 20 * 0.25,
+        pixelWidth: 40,
+        pixelHeight: 20,
+        pixels: pixels.get(spriteRequestKey(0, 0))?.pixels,
+      },
+    ]);
+  });
+
+  it("scales an anim element's resolved sprite position and drawn size the same way a normal element's is scaled", () => {
+    const el = element({
+      type: "anim",
+      actionNumber: 5,
+      startX: 100,
+      startY: 50,
+    });
+    const meta = new Map([
+      [
+        spriteRequestKey(3, 1),
+        sprite({ axisX: 10, axisY: 10, width: 40, height: 20 }),
+      ],
+    ]);
+    const pixels = new Map([
+      [
+        spriteRequestKey(3, 1),
+        { pixels: new Uint8Array(40 * 20 * 4), width: 40, height: 20 },
+      ],
+    ]);
+    const statuses = new Map([
+      [0, { kind: "resolved" as const, sprite: { group: 3, image: 1 } }],
+    ]);
+
+    const plan = buildDrawPlan(
+      [el],
+      meta,
+      pixels,
+      localCoordWidth,
+      { x: 0, y: 0 },
+      statuses,
+      { x: 0.5, y: 0.25 },
+    );
+
+    expect(plan).toEqual([
+      {
+        kind: "sprite",
+        elementIndex: 0,
+        x: stageXToCanvasX(100 * 0.5 - 10 * 0.5, localCoordWidth),
+        y: 50 * 0.25 - 10 * 0.25,
+        width: 40 * 0.5,
+        height: 20 * 0.25,
+        pixelWidth: 40,
+        pixelHeight: 20,
+        pixels: pixels.get(spriteRequestKey(3, 1))?.pixels,
+      },
+    ]);
+  });
+
+  it("scales a fixed-size placeholder's drawn box, still centered on the scaled position, for a reference absent from the sheet", () => {
+    const el = element({
+      startX: 100,
+      startY: 50,
+      sprite: { group: 9, image: 9 },
+    });
+
+    const plan = buildDrawPlan(
+      [el],
+      new Map(),
+      new Map(),
+      localCoordWidth,
+      { x: 0, y: 0 },
+      new Map(),
+      { x: 0.5, y: 0.25 },
+    );
+
+    expect(plan).toEqual([
+      {
+        kind: "placeholder",
+        elementIndex: 0,
+        x:
+          stageXToCanvasX(100 * 0.5, localCoordWidth) -
+          (PLACEHOLDER_SIZE * 0.5) / 2,
+        y: 50 * 0.25 - (PLACEHOLDER_SIZE * 0.25) / 2,
+        width: PLACEHOLDER_SIZE * 0.5,
+        height: PLACEHOLDER_SIZE * 0.25,
+      },
+    ]);
+  });
+
+  it("scales a metadata-sized placeholder's drawn box when pixels failed to resolve for an otherwise valid, scaled reference", () => {
+    const el = element({
+      startX: 0,
+      startY: 0,
+      sprite: { group: 0, image: 0 },
+    });
+    const meta = new Map([
+      [
+        spriteRequestKey(0, 0),
+        sprite({ axisX: 10, axisY: 10, width: 40, height: 20 }),
+      ],
+    ]);
+
+    const plan = buildDrawPlan(
+      [el],
+      meta,
+      new Map(),
+      localCoordWidth,
+      { x: 0, y: 0 },
+      new Map(),
+      { x: 0.5, y: 0.25 },
+    );
+
+    expect(plan).toEqual([
+      {
+        kind: "placeholder",
+        elementIndex: 0,
+        x: stageXToCanvasX(-10 * 0.5, localCoordWidth),
+        y: -10 * 0.25,
+        width: 40 * 0.5,
+        height: 20 * 0.25,
+      },
+    ]);
+  });
+
+  it("treats a degenerate 0 xScale/yScale (stage's own zero-value with no [StageInfo] section) as no scaling, not a collapse to a zero-size point", () => {
+    const el = element({
+      startX: 100,
+      startY: 50,
+      sprite: { group: 0, image: 0 },
+    });
+    const meta = new Map([
+      [
+        spriteRequestKey(0, 0),
+        sprite({ axisX: 5, axisY: 5, width: 40, height: 20 }),
+      ],
+    ]);
+    const pixels = new Map([
+      [
+        spriteRequestKey(0, 0),
+        { pixels: new Uint8Array(40 * 20 * 4), width: 40, height: 20 },
+      ],
+    ]);
+
+    const plan = buildDrawPlan(
+      [el],
+      meta,
+      pixels,
+      localCoordWidth,
+      { x: 0, y: 0 },
+      new Map(),
+      { x: 0, y: 0 },
+    );
+
+    expect(plan).toEqual([
+      {
+        kind: "sprite",
+        elementIndex: 0,
+        x: stageXToCanvasX(100 - 5, localCoordWidth),
+        y: 50 - 5,
+        width: 40,
+        height: 20,
+        pixelWidth: 40,
+        pixelHeight: 20,
+        pixels: pixels.get(spriteRequestKey(0, 0))?.pixels,
+      },
+    ]);
+  });
+});
+
+describe("resolveBgScale", () => {
+  it("passes through a positive scale factor unchanged", () => {
+    expect(resolveBgScale(0.35)).toBe(0.35);
+    expect(resolveBgScale(2)).toBe(2);
+  });
+
+  it("defaults a zero scale (stage's own zero-value with no [StageInfo] section) to 1", () => {
+    expect(resolveBgScale(0)).toBe(1);
+  });
+
+  it("defaults a negative scale to 1 rather than mirroring/flipping the drawing", () => {
+    expect(resolveBgScale(-0.5)).toBe(1);
+  });
+
+  it("defaults a non-numeric (NaN) scale to 1", () => {
+    expect(resolveBgScale(Number.NaN)).toBe(1);
   });
 });

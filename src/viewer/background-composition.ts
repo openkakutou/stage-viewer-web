@@ -17,6 +17,23 @@ export function stageXToCanvasX(x: number, localCoordWidth: number): number {
 }
 
 /**
+ * Resolves a stage's declared `[StageInfo]` `xscale`/`yscale` (backlog item
+ * 009) to the factor actually applied when composing the scene, guarding
+ * against `stage`'s own documented zero-value landmine: a `.def` with no
+ * `[StageInfo]` section at all leaves `BGdef.XScale`/`YScale` at the Go
+ * zero value `0` rather than the real MUGEN/Ikemen default of `1` (see
+ * `stage`'s `.vibe/decisions/009`) — applying that literally would collapse
+ * every element to a zero-size point, a worse regression than the bug this
+ * item fixes. A negative or non-numeric value is equally nonsensical as a
+ * drawing scale, so it falls back the same way. Mirrors
+ * `model-camera.ts`'s own `resolveCameraParams` pattern for a degenerate
+ * declared value.
+ */
+export function resolveBgScale(rawScale: number): number {
+  return rawScale > 0 ? rawScale : 1;
+}
+
+/**
  * The top-left canvas position to draw a decoded sprite at, so that the
  * sprite's own axis (pivot) point lands exactly on the element's
  * configured `(startX, startY)` position — the same pivot-relative-to-
@@ -237,8 +254,21 @@ export type DrawCommand =
       elementIndex: number;
       x: number;
       y: number;
+      /**
+       * On-canvas drawn size, after applying the stage's `xScale`/`yScale`
+       * (backlog item 009) — equal to `pixelWidth`/`pixelHeight` for a
+       * stage with no scaling (the default, and the common case), so an
+       * unscaled stage's draw output is unaffected.
+       */
       width: number;
       height: number;
+      /**
+       * The decoded sprite pixel buffer's own native size — always matches
+       * `pixels` exactly, independent of any draw-time scale, since the
+       * buffer itself is never resampled here.
+       */
+      pixelWidth: number;
+      pixelHeight: number;
       pixels: Uint8Array;
     }
   | {
@@ -287,7 +317,18 @@ export function buildDrawPlan(
     number,
     AnimationFrameStatus
   > = new Map(),
+  /**
+   * The stage's own `[StageInfo]` `xscale`/`yscale` (backlog item 009),
+   * defaulting to `{x: 1, y: 1}` (no scaling) — the common case, and
+   * exactly today's behavior. Resolved through `resolveBgScale` before
+   * use, so a degenerate `0` (or negative/NaN) input never collapses the
+   * scene to a zero-size point.
+   */
+  scale: { x: number; y: number } = { x: 1, y: 1 },
 ): DrawCommand[] {
+  const xScale = resolveBgScale(scale.x);
+  const yScale = resolveBgScale(scale.y);
+
   const ordered = elements
     .map((element, elementIndex) => ({ element, elementIndex }))
     .sort(
@@ -307,8 +348,8 @@ export function buildDrawPlan(
     }
 
     const position = resolveParallaxPosition(
-      element.startX,
-      element.startY,
+      element.startX * xScale,
+      element.startY * yScale,
       element.deltaX,
       element.deltaY,
       camera.x,
@@ -323,10 +364,11 @@ export function buildDrawPlan(
           kind: "placeholder",
           elementIndex,
           x:
-            stageXToCanvasX(position.x, localCoordWidth) - PLACEHOLDER_SIZE / 2,
-          y: position.y - PLACEHOLDER_SIZE / 2,
-          width: PLACEHOLDER_SIZE,
-          height: PLACEHOLDER_SIZE,
+            stageXToCanvasX(position.x, localCoordWidth) -
+            (PLACEHOLDER_SIZE * xScale) / 2,
+          y: position.y - (PLACEHOLDER_SIZE * yScale) / 2,
+          width: PLACEHOLDER_SIZE * xScale,
+          height: PLACEHOLDER_SIZE * yScale,
         });
         continue;
       }
@@ -343,10 +385,12 @@ export function buildDrawPlan(
       commands.push({
         kind: "placeholder",
         elementIndex,
-        x: stageXToCanvasX(position.x, localCoordWidth) - PLACEHOLDER_SIZE / 2,
-        y: position.y - PLACEHOLDER_SIZE / 2,
-        width: PLACEHOLDER_SIZE,
-        height: PLACEHOLDER_SIZE,
+        x:
+          stageXToCanvasX(position.x, localCoordWidth) -
+          (PLACEHOLDER_SIZE * xScale) / 2,
+        y: position.y - (PLACEHOLDER_SIZE * yScale) / 2,
+        width: PLACEHOLDER_SIZE * xScale,
+        height: PLACEHOLDER_SIZE * yScale,
       });
       continue;
     }
@@ -354,8 +398,8 @@ export function buildDrawPlan(
     const topLeft = computeSpriteTopLeft(
       position.x,
       position.y,
-      meta.axisX,
-      meta.axisY,
+      meta.axisX * xScale,
+      meta.axisY * yScale,
     );
     const x = stageXToCanvasX(topLeft.x, localCoordWidth);
     const y = topLeft.y;
@@ -367,8 +411,8 @@ export function buildDrawPlan(
         elementIndex,
         x,
         y,
-        width: meta.width,
-        height: meta.height,
+        width: meta.width * xScale,
+        height: meta.height * yScale,
       });
       continue;
     }
@@ -378,8 +422,10 @@ export function buildDrawPlan(
       elementIndex,
       x,
       y,
-      width: resolved.width,
-      height: resolved.height,
+      width: resolved.width * xScale,
+      height: resolved.height * yScale,
+      pixelWidth: resolved.width,
+      pixelHeight: resolved.height,
       pixels: resolved.pixels,
     });
   }
