@@ -1,5 +1,5 @@
 ---
-status: todo
+status: in_progress
 ---
 # Real-stage-corpus rendering sanity test
 
