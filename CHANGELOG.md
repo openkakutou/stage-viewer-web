@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added an opt-in developer check that scans real, unmodified stage files and verifies each one's background actually composes into a sensible picture (correctly sized and positioned), not just that the file loads without error — catches the class of "loads fine but looks broken" bug before a user notices it. Runs only when explicitly pointed at a local folder of stage files; never runs automatically and has no effect on the app itself.
+
 ## [0.8.1] - 2026-09-07
 
 ### Fixed
