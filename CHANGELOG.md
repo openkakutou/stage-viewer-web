@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-10
+
 ### Added
 
 - Added an opt-in developer check that scans real, unmodified stage files and verifies each one's background actually composes into a sensible picture (correctly sized and positioned), not just that the file loads without error — catches the class of "loads fine but looks broken" bug before a user notices it. Runs only when explicitly pointed at a local folder of stage files; never runs automatically and has no effect on the app itself.
@@ -59,7 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The app now uses the shared OpenKakutou design system for its layout and visual style, and can load a stage file (background, camera, and layer data) through the underlying stage library — the on-screen file loading and preview screens themselves come in later updates.
 
-[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.8.1...HEAD
+[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/openkakutou/stage-viewer-web/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.6.0...v0.7.0
