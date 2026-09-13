@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added automated screenshot-comparison tests of the app's real rendered output: the composed background preview for a real 2D stage (`Dengeki_Subway`, the exact stage a past bug once made render as one oversized, broken-looking fragment) and a real 3D model-based stage's rendered preview. Runs in CI on every push and fails the build if a real visual regression is introduced; has no effect on the app itself.
+
 ## [0.9.0] - 2026-09-10
 
 ### Added

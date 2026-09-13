@@ -48,6 +48,28 @@ A stage that fails a real parse, or whose referenced sprite sheet can't be found
 
 **Latest local run** (2026-09-10, 58 `.def` files, `Dengeki_Subway` fix from backlog item 009 already applied): 58 checked, 0 skipped, 7 failed — all 7 on the zero-`localcoord` condition above (`CC_BEACH`, `EXShadowPokemonGym`, `JB Jungle`, `School`, `XX'CC'SCHOOLYARD'XX`, `XX'GARAGE'XX`, `xxcolonyxx`), none on the oversized+offscreen condition. `Dengeki_Subway` itself passes clean, confirming this scan does flag the historical bug's reproduction (verified via the unit tests above) and no longer flags the real fixed file. The 7 zero-`localcoord` failures are a distinct, real bug this scan surfaced as a side effect of existing — tracked as backlog item 016, not fixed here, matching this item's own scope (a rendering-sanity test, not a rendering fix).
 
+## Visual regression tests
+
+Real browser rendering (composed background pixels, 3D model rendering) is checked with Playwright's screenshot comparison (`toHaveScreenshot()`), not the Vitest suite above — this is a separate suite/command from `npm test`, extending `web-ui-kit`'s shared visual-testing preset (`@openkakutou/web-ui-kit/testing/visual-preset`, see that repo's own `docs/testing.md`) for a fixed viewport, pinned locale, and default diff threshold, plus a helper that forces animations/transitions off and waits for fonts before a screenshot is taken.
+
+```sh
+npm run test:visual           # compares against the committed baselines
+npm run test:visual:update    # regenerates baselines after a deliberate visual change
+```
+
+`playwright.config.ts`'s `webServer` builds and serves the app itself (`npm run build && npm run preview`) — `npm run test:visual` needs no separate manual build step first. `tests/visual/background-preview.visual.spec.ts` drives the app through its real `<input webkitdirectory>` folder picker (`page.locator("#stage-folder-picker").setInputFiles(...)`, the same directory-path-accepting Playwright API the real-browser folder-input verification below already relies on), loading a real, vendored stage fixture folder end-to-end rather than bypassing the loading flow, then screenshots `.background-preview__stack` — the same composed 2D-canvas-plus-optional-3D-layer region for either kind of stage.
+
+Two baselines, from two real, vendored fixture folders (see `tests/visual/fixtures/README.md` for exact provenance and why each is trimmed to one `.def` file):
+
+- **`dengeki-subway/`** — a real 2D MUGEN stage whose `[StageInfo]` sets `xscale = .35`/`yscale = .35`. This is the exact stage that once exposed the composition bug backlog item 009 fixed (every sprite drawn at its raw, unscaled size); its baseline is the regression guard against that bug recurring. Verified live during this item's own development: temporarily reverting `resolveBgScale`'s effect back to `{1, 1}` made this test fail with 100% of the compared element's pixels different, and restoring the fix made it pass again — confirming the suite actually catches this exact class of regression, not just that it runs.
+- **`cvs2london/`** — a real, MIT-licensed Ikemen GO 3D model-based stage with no 2D BG elements of its own (the 3D model is the entire background), exercising the model-only preview path (backlog item 006) instead.
+
+A failing comparison attaches the actual/expected/diff images to the run (`test-results/`, gitignored). Baselines are only ever regenerated deliberately and reviewed like any other diff — never silently. This suite runs as its own step in `.github/workflows/deploy-pages.yml`, after `Build` and before the Pages deploy steps, on a runner image pinned to `ubuntu-24.04` (not the floating `ubuntu-latest` the rest of this repo's CI otherwise used) — see `.vibe/decisions/009-visual-regression-ci-gating.md` for why a floating image is a real risk once a job carries committed screenshot baselines.
+
+### Why the shared preset
+
+Both functions (`createVisualProjectConfig`, `waitForVisualReady`) come from `@openkakutou/web-ui-kit`'s own package export rather than being reimplemented here — the same fixed viewport (1280×800), pinned `en-US` locale (a headless browser's default `navigator.language` is not guaranteed to be English), and `maxDiffPixelRatio: 0.02` diff threshold every other consuming app in this org uses. See `web-ui-kit`'s own `docs/testing.md` ("Visual regression testing" section) for the full rationale.
+
 ## 3D model-based stage preview
 
 `model-camera.test.ts` covers the pure camera-projection/model-transform math directly (no `three`, no DOM) — including that a degenerate stage-declared `far` is compared against the *resolved* (post-fallback) `near`, not the raw declared one, since a naive implementation comparing against the raw value would silently accept an invalid range. `model-preview.test.ts` covers the `three`/DOM orchestration with the renderer, glTF/`.hdr` loaders, and `requestAnimationFrame`/`ResizeObserver` all injected — no real WebGL is available under this project's `jsdom` (confirmed: it implements no WebGL context at all), so these tests exercise control flow (mount/cleanup, the failure-banner path for a missing/ambiguous/unreadable asset, the coalesced render-on-demand gate, resize sync, context-restore) against lightweight fakes rather than real three.js objects. `model-assets.test.ts` covers the model/`.hdr` resolution the same way `stage-file-input.test.ts` covers sprite-sheet resolution (basename matching, ambiguity, read errors) — reusing `basename-resolution.ts`/`file-bytes.ts` directly.

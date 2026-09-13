@@ -5,3 +5,9 @@ dist/
 
 # Downloaded/locally-built WASM artifacts from the stage library
 public/wasm/
+
+# Playwright visual-regression run output (actual/expected/diff images,
+# HTML report) — committed baselines live in
+# tests/visual/**/*.spec.ts-snapshots/, never here.
+/test-results/
+/playwright-report/
