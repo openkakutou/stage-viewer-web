@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-09-13
+
 ### Added
 
 - Added automated screenshot-comparison tests of the app's real rendered output: the composed background preview for a real 2D stage (`Dengeki_Subway`, the exact stage a past bug once made render as one oversized, broken-looking fragment) and a real 3D model-based stage's rendered preview. Runs in CI on every push and fails the build if a real visual regression is introduced; has no effect on the app itself.
@@ -65,7 +67,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The app now uses the shared OpenKakutou design system for its layout and visual style, and can load a stage file (background, camera, and layer data) through the underlying stage library — the on-screen file loading and preview screens themselves come in later updates.
 
-[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/openkakutou/stage-viewer-web/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.7.0...v0.8.0
