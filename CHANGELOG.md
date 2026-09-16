@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added the internal groundwork for correctly sizing the background preview around a stage's actual content (a background element, camera bounds, or stage boundaries positioned outside the stage's declared screen area), rather than the fixed window used today — no visible change yet, laying the ground for an upcoming "show the whole stage" view.
+
 ## [0.10.0] - 2026-09-13
 
 ### Added
