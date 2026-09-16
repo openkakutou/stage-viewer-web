@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-09-16
+
 ### Added
 
 - Added the internal groundwork for correctly sizing the background preview around a stage's actual content (a background element, camera bounds, or stage boundaries positioned outside the stage's declared screen area), rather than the fixed window used today — no visible change yet, laying the ground for an upcoming "show the whole stage" view.
@@ -71,7 +73,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The app now uses the shared OpenKakutou design system for its layout and visual style, and can load a stage file (background, camera, and layer data) through the underlying stage library — the on-screen file loading and preview screens themselves come in later updates.
 
-[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/openkakutou/stage-viewer-web/compare/v0.8.0...v0.8.1

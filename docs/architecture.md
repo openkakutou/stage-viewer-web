@@ -106,7 +106,13 @@ flowchart LR
   the model/environment, builds the scene, and renders it into
   `web-ui-kit`'s `<wuik-viewport-3d>` — see "3D model-based stage preview"
   below. `background-preview.ts` mounts it as an extra layer, behind its
-  own canvas, when the loaded stage has one.
+  own canvas, when the loaded stage has one. `background-bounds.ts`
+  (backlog item 012) is a further pure module computing the real content
+  bounding box — every drawn `DrawCommand` unioned with the stage's own
+  `cameraBounds`/`stageBoundaries` — kept separate from
+  `background-composition.ts` so that module's own tested draw-plan code
+  path stays untouched; not wired into any screen yet, laying the ground
+  for a future "show the whole stage" overview mode.
 
 ## WebAssembly dependency
 
