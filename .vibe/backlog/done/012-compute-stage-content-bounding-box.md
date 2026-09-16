@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 ---
 # Compute Stage Content Bounding Box
 
