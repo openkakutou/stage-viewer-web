@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-09-18
+
 ### Added
 
 - The composed background preview now shows a 2D stage's entire content by default — background elements, camera bounds, or stage boundaries positioned outside the stage's declared screen area are no longer clipped, and can be explored with the existing zoom/pan control. A stage whose content already fits within the declared screen area looks exactly as before. A 3D (model-based) stage is unaffected for now.
@@ -77,7 +79,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The app now uses the shared OpenKakutou design system for its layout and visual style, and can load a stage file (background, camera, and layer data) through the underlying stage library — the on-screen file loading and preview screens themselves come in later updates.
 
-[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.8.1...v0.9.0
