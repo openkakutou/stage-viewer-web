@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 depends_on: [012]
 ---
 # Render an Overview Mode Showing the Entire Stage
