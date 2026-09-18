@@ -36,3 +36,8 @@ _Sources: `src/wasm/types.ts`, `src/input/stage-file-input.ts`_
 A Stage that references a 3D model file (an Ikemen GO extension) instead of, or alongside, its flat BG Elements — signaled by `bgDef.modelFile` being non-empty, the same field this app's own characteristics panel reads to state whether a loaded stage is 2D or 3D. Such a stage also carries model placement/scale, environment (image-based) lighting, and 3D-only camera settings, all zero-valued unless a model is actually referenced.
 **Do not confuse with:** BG Element, which a 3D Model-Based Stage may still define alongside its model — the two compose in the same preview rather than being mutually exclusive.
 _Sources: `src/wasm/types.ts`, `src/viewer/characteristics-panel.ts`, `src/input/model-assets.ts`, `src/viewer/model-preview.ts`_
+
+## Overview Mode
+How a 2D-only Stage's composed background preview is sized by default: the canvas covers the stage's real content extent — every BG Element plus the declared Camera Bounds and Stage Boundaries — rather than being clipped to the stage's own fixed `localCoordWidth`/`localCoordHeight` window, so the whole Stage is visible and reachable through zoom/pan. A Stage whose content already fits entirely within that window renders identically either way. A 3D Model-Based Stage is excluded and always keeps the fixed window instead.
+**Do not confuse with:** Camera Bounds/Stage Boundaries, which are two of the several inputs unioned to compute this mode's canvas extent, not the mode itself.
+_Sources: `src/viewer/background-bounds.ts`, `src/viewer/background-preview.ts`_

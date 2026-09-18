@@ -111,8 +111,18 @@ flowchart LR
   bounding box — every drawn `DrawCommand` unioned with the stage's own
   `cameraBounds`/`stageBoundaries` — kept separate from
   `background-composition.ts` so that module's own tested draw-plan code
-  path stays untouched; not wired into any screen yet, laying the ground
-  for a future "show the whole stage" overview mode.
+  path stays untouched. Backlog item 013 wires it into `background-preview.ts`:
+  for a 2D-only stage, every redraw (initial load and every playback tick
+  alike, since a scrolling parallax element's position can shift the box)
+  resizes the canvas and its `<wuik-viewport>` container to that bounding
+  box instead of the stage's fixed declared screen size, so the whole
+  stage is visible and explorable via zoom/pan — the canvas is only
+  actually resized, and the viewport only re-fit, when the computed size
+  genuinely changed from the last redraw, so a user's manual zoom/pan is
+  never reset on a redraw whose visible extent didn't change. A stage with
+  a 3D model layer is explicitly excluded from this resizing (its
+  container also hosts the independent 3D viewport) and keeps the fixed
+  declared screen size unconditionally.
 
 ## WebAssembly dependency
 

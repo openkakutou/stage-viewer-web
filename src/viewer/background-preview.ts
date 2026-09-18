@@ -39,6 +39,10 @@ import type {
 // visual vocabulary, so a subtractive highlight would read as another
 // layer failing rather than a selection).
 import {
+  computeStageBoundingBox,
+  translateDrawCommands,
+} from "./background-bounds.ts";
+import {
   type AnimationFrameStatus,
   type DrawCommand,
   INITIAL_PLAYBACK_STATE,
@@ -307,11 +311,18 @@ export function renderBackgroundPreview(
   let isPlaying = false;
   let lastFrameTimestamp: number | null = null;
   let rafHandle: number | null = null;
+  // Backlog item 013: the last canvas extent actually applied, so a resize
+  // (and the viewport re-fit that must accompany it) only happens when the
+  // newly computed extent genuinely differs from it — never on every
+  // playback tick just because the bbox was recomputed again. `null` until
+  // the first draw, so that first draw always counts as a change.
+  let lastCanvasWidth: number | null = null;
+  let lastCanvasHeight: number | null = null;
 
   const sffBytesNonNull = sffBytes ?? new Uint8Array();
 
   function rebuildPlanAndDraw(): void {
-    plan = buildDrawPlan(
+    const rawPlan = buildDrawPlan(
       elements,
       spriteMetaByKey,
       pixelsByKey,
@@ -320,7 +331,42 @@ export function renderBackgroundPreview(
       animationStatusByElementIndex,
       { x: loadedStage.bgDef.xScale, y: loadedStage.bgDef.yScale },
     );
+
+    let width: number;
+    let height: number;
+    if (hasModelLayer) {
+      // Backlog item 013: a 3D model-based stage's `stack` container also
+      // hosts the independent 3D `<wuik-viewport-3d>` layer — resizing it
+      // for a 2D overview would reshape that layer too. Out of scope here;
+      // stays exactly at today's fixed local-coordinate-space window.
+      width = loadedStage.bgDef.localCoordWidth;
+      height = loadedStage.bgDef.localCoordHeight;
+      plan = rawPlan;
+    } else {
+      const bbox = computeStageBoundingBox(
+        rawPlan,
+        loadedStage.bgDef.localCoordWidth,
+        loadedStage.bgDef.localCoordHeight,
+        loadedStage.cameraBounds,
+        loadedStage.stageBoundaries,
+      );
+      width = bbox.maxX - bbox.minX;
+      height = bbox.maxY - bbox.minY;
+      plan = translateDrawCommands(rawPlan, bbox.minX, bbox.minY);
+    }
+
+    const sizeChanged =
+      width !== lastCanvasWidth || height !== lastCanvasHeight;
+    if (sizeChanged) {
+      canvas.width = width;
+      canvas.height = height;
+      stack.style.aspectRatio = `${width} / ${height}`;
+      lastCanvasWidth = width;
+      lastCanvasHeight = height;
+    }
+
     drawComposition(canvas, plan, selectedElementIndex, hasModelLayer);
+    if (sizeChanged) resetViewportToFit(viewport);
   }
 
   function updateAnimRowLabels(): void {
@@ -522,11 +568,12 @@ export function renderBackgroundPreview(
     controls.appendChild(playPauseButton);
     list.appendChild(controls);
 
-    canvas.width = loadedStage.bgDef.localCoordWidth;
-    canvas.height = loadedStage.bgDef.localCoordHeight;
     canvas.hidden = false;
+    // Canvas sizing (backlog item 013's overview-mode bounding box, or the
+    // fixed window for a 3D stage) and the matching viewport re-fit both
+    // happen inside rebuildPlanAndDraw now, exactly the same way a
+    // playback tick triggers them.
     rebuildPlanAndDraw();
-    resetViewportToFit(viewport);
   }
 
   Promise.all([

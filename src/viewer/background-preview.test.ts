@@ -598,3 +598,242 @@ describe("renderBackgroundPreview — 3D model layer (backlog item 006)", () => 
     expect(root.querySelector(".background-preview__empty")).not.toBeNull();
   });
 });
+
+describe("renderBackgroundPreview — overview-mode canvas sizing (backlog item 013)", () => {
+  function stageWithBounds(
+    elements: BGElement[],
+    overrides: Partial<
+      Pick<StageData, "cameraBounds" | "stageBoundaries">
+    > = {},
+  ): StageData {
+    return { ...stageWith(elements), ...overrides };
+  }
+
+  function findPlayButton(root: HTMLElement): HTMLElement {
+    const button = Array.from(root.querySelectorAll("wuik-button")).find(
+      (el) => el.textContent === "Play" || el.textContent === "Pause",
+    );
+    if (!button) throw new Error("play/pause button not found");
+    return button as HTMLElement;
+  }
+
+  it("expands the canvas beyond the local coordinate window when an element is positioned past it", async () => {
+    const root = document.createElement("div");
+    const stage = stageWithBounds([element({ startX: 1000, startY: 1000 })]);
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+    });
+    await vi.waitFor(() => {
+      expect(root.querySelector<HTMLCanvasElement>("canvas")?.hidden).toBe(
+        false,
+      );
+    });
+
+    const canvas = root.querySelector<HTMLCanvasElement>("canvas");
+    const stack = root.querySelector<HTMLElement>(".background-preview__stack");
+    expect(canvas?.width).toBeGreaterThan(320);
+    expect(canvas?.height).toBeGreaterThanOrEqual(1000);
+    expect(stack?.style.aspectRatio).toBe(
+      `${canvas?.width} / ${canvas?.height}`,
+    );
+  });
+
+  it("expands the canvas to cover declared camera bounds / stage boundaries even when every element fits inside the window", async () => {
+    const root = document.createElement("div");
+    const stage = stageWithBounds([element()], {
+      cameraBounds: { left: -2000, right: 2000, high: -50, low: 50 },
+      stageBoundaries: {
+        left: -2000,
+        right: 2000,
+        topBound: 0,
+        bottomBound: 0,
+      },
+    });
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+    });
+    await vi.waitFor(() => {
+      expect(root.querySelector<HTMLCanvasElement>("canvas")?.hidden).toBe(
+        false,
+      );
+    });
+
+    const canvas = root.querySelector<HTMLCanvasElement>("canvas");
+    // The declared range alone (-2000..2000) is far wider than localCoordWidth
+    // (320) could ever cover — any correct wiring must grow well past it.
+    expect(canvas?.width).toBeGreaterThan(3500);
+  });
+
+  it("never produces an inverted or negative-size canvas when cameraBounds/stageBoundaries fields are given out of natural order", async () => {
+    const root = document.createElement("div");
+    // left > right, high > low — a real `stage` data quirk this app never
+    // assumes ordered (see background-bounds.ts's own docs).
+    const stage = stageWithBounds([element()], {
+      cameraBounds: { left: 500, right: -500, high: 300, low: -300 },
+      stageBoundaries: {
+        left: 800,
+        right: -800,
+        topBound: 0,
+        bottomBound: 0,
+      },
+    });
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+    });
+    await vi.waitFor(() => {
+      expect(root.querySelector<HTMLCanvasElement>("canvas")?.hidden).toBe(
+        false,
+      );
+    });
+
+    const canvas = root.querySelector<HTMLCanvasElement>("canvas");
+    expect(canvas?.width).toBeGreaterThan(0);
+    expect(canvas?.height).toBeGreaterThan(0);
+    // Still widened to cover the (unioned) declared range, not collapsed by
+    // the out-of-order fields.
+    expect(canvas?.width).toBeGreaterThan(320);
+  });
+
+  it("keeps a 3D model-based stage at the fixed local coordinate window even when its 2D elements are positioned far past it", async () => {
+    const root = document.createElement("div");
+    const stage = stageWithBounds([element({ startX: 5000, startY: 5000 })]);
+    const renderModelPreview = vi.fn();
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+      renderModelPreview,
+      modelAssets: {
+        status: "success",
+        modelBytes: new Uint8Array([1]),
+        modelFileName: "stage.glb",
+        environmentBytes: null,
+        environmentFileName: null,
+      },
+    });
+    await vi.waitFor(() => {
+      expect(root.querySelector<HTMLCanvasElement>("canvas")?.hidden).toBe(
+        false,
+      );
+    });
+
+    const canvas = root.querySelector<HTMLCanvasElement>("canvas");
+    expect(canvas?.width).toBe(320);
+    expect(canvas?.height).toBe(240);
+  });
+
+  it("re-fits the viewport once on load, but not again on a playback tick whose visible extent is unchanged", async () => {
+    const root = document.createElement("div");
+    // deltaX 0 (the default): this element's canvas position never moves
+    // with cameraX, so its (already oversized) extent is stable tick to tick.
+    const stage = stageWithBounds([element({ startX: 1000 })]);
+    const drawComposition = vi.fn();
+    let queued: FrameRequestCallback | null = null;
+    const requestAnimationFrame = vi.fn((cb: FrameRequestCallback) => {
+      queued = cb;
+      return 1;
+    });
+    const cancelAnimationFrame = vi.fn(() => {
+      queued = null;
+    });
+    const fire = (timestamp: number) => {
+      const cb = queued;
+      queued = null;
+      cb?.(timestamp);
+    };
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+      drawComposition,
+      requestAnimationFrame,
+      cancelAnimationFrame,
+    });
+    await vi.waitFor(() => {
+      expect(drawComposition).toHaveBeenCalled();
+    });
+
+    const viewport = root.querySelector("wuik-viewport") as HTMLElement & {
+      resetToFit?: () => void;
+    };
+    const resetToFit = vi.fn();
+    viewport.resetToFit = resetToFit;
+
+    findPlayButton(root).click();
+    drawComposition.mockClear();
+    fire(0); // establishes lastFrameTimestamp; its own delta is 0 (no cameraX movement yet)
+    await vi.waitFor(() => {
+      expect(drawComposition).toHaveBeenCalledTimes(1);
+    });
+    drawComposition.mockClear();
+    fire(80); // a real elapsed delta now — cameraX advances, but this element ignores it
+    await vi.waitFor(() => {
+      expect(drawComposition).toHaveBeenCalledTimes(1);
+    });
+
+    expect(resetToFit).not.toHaveBeenCalled();
+  });
+
+  it("re-fits the viewport again once a playback tick genuinely grows the visible extent past what was previously shown", async () => {
+    const root = document.createElement("div");
+    // deltaX 50: a large parallax ratio so a single tick's cameraX
+    // advancement pushes this element's canvas position far past the
+    // window, growing the bbox mid-playback (not just on load).
+    const stage = stageWithBounds([
+      element({ startX: 0, startY: 0, deltaX: 50 }),
+    ]);
+    const drawComposition = vi.fn();
+    let queued: FrameRequestCallback | null = null;
+    const requestAnimationFrame = vi.fn((cb: FrameRequestCallback) => {
+      queued = cb;
+      return 1;
+    });
+    const cancelAnimationFrame = vi.fn(() => {
+      queued = null;
+    });
+    const fire = (timestamp: number) => {
+      const cb = queued;
+      queued = null;
+      cb?.(timestamp);
+    };
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+      drawComposition,
+      requestAnimationFrame,
+      cancelAnimationFrame,
+    });
+    await vi.waitFor(() => {
+      expect(drawComposition).toHaveBeenCalled();
+    });
+
+    const viewport = root.querySelector("wuik-viewport") as HTMLElement & {
+      resetToFit?: () => void;
+    };
+    const resetToFit = vi.fn();
+    viewport.resetToFit = resetToFit;
+
+    findPlayButton(root).click();
+    drawComposition.mockClear();
+    fire(0); // establishes lastFrameTimestamp; no cameraX movement yet
+    await vi.waitFor(() => {
+      expect(drawComposition).toHaveBeenCalledTimes(1);
+    });
+    expect(resetToFit).not.toHaveBeenCalled();
+
+    drawComposition.mockClear();
+    fire(80); // real elapsed delta — cameraX advances, pushing the element well past the window
+    await vi.waitFor(() => {
+      expect(drawComposition).toHaveBeenCalledTimes(1);
+    });
+
+    expect(resetToFit).toHaveBeenCalledTimes(1);
+  });
+});

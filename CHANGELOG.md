@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The composed background preview now shows a 2D stage's entire content by default — background elements, camera bounds, or stage boundaries positioned outside the stage's declared screen area are no longer clipped, and can be explored with the existing zoom/pan control. A stage whose content already fits within the declared screen area looks exactly as before. A 3D (model-based) stage is unaffected for now.
+
 ## [0.11.0] - 2026-09-16
 
 ### Added
