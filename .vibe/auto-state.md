@@ -1,9 +1,7 @@
 ---
-status: running
+status: idle
 started: 2026-09-18T03:00
 limit: 1
-current: 014
-attempt: 1
 ---
 # Auto run journal
 
@@ -26,3 +24,4 @@ attempt: 1
 - 013 — feature — done (9223d81)
 
 ## 2026-09-18T03:00 — run started (limit: 1)
+- 014 — feature — aborted: session hit its weekly usage limit before any work landed (resets 2026-09-19T21:00 Europe/Paris); item left `status: todo`, untouched
