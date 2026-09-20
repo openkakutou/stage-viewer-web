@@ -38,6 +38,11 @@ A Stage that references a 3D model file (an Ikemen GO extension) instead of, or 
 _Sources: `src/wasm/types.ts`, `src/viewer/characteristics-panel.ts`, `src/input/model-assets.ts`, `src/viewer/model-preview.ts`_
 
 ## Overview Mode
-How a 2D-only Stage's composed background preview is sized by default: the canvas covers the stage's real content extent — every BG Element plus the declared Camera Bounds and Stage Boundaries — rather than being clipped to the stage's own fixed `localCoordWidth`/`localCoordHeight` window, so the whole Stage is visible and reachable through zoom/pan. A Stage whose content already fits entirely within that window renders identically either way. A 3D Model-Based Stage is excluded and always keeps the fixed window instead.
-**Do not confuse with:** Camera Bounds/Stage Boundaries, which are two of the several inputs unioned to compute this mode's canvas extent, not the mode itself.
+How a 2D-only Stage's composed background preview is sized by default: the canvas covers the stage's real content extent — every BG Element plus the declared Camera Bounds and Stage Boundaries — rather than being clipped to the stage's own fixed `localCoordWidth`/`localCoordHeight` window, so the whole Stage is visible and reachable through zoom/pan. A Stage whose content already fits entirely within that window renders identically either way. A 3D Model-Based Stage is excluded and always keeps the fixed window instead. A 2D Stage can be switched to Game Window Mode instead via an explicit toggle.
+**Do not confuse with:** Camera Bounds/Stage Boundaries, which are two of the several inputs unioned to compute this mode's canvas extent, not the mode itself. Game Window Mode, this mode's opposite.
 _Sources: `src/viewer/background-bounds.ts`, `src/viewer/background-preview.ts`_
+
+## Game Window Mode
+The composed background preview's other sizing choice, selectable via an explicit toggle next to Play/Pause: the canvas is sized to exactly the Stage's own fixed declared `localCoordWidth`/`localCoordHeight` window, with no content-extent expansion — reproducing the exact crop a player actually sees in-game, byte-for-byte the same rendering this app used before Overview Mode existed. A 3D Model-Based Stage always renders this way, with no toggle shown, since its `stack` container also hosts an independent 3D viewport with no bounding-box concept to switch between.
+**Do not confuse with:** Overview Mode, this mode's opposite and the default for a 2D Stage.
+_Sources: `src/viewer/background-preview.ts`_

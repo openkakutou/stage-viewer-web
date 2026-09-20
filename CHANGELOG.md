@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The composed background preview for a 2D stage now has a "view" toggle between "Overview" (the whole stage content, the existing default) and "Game window" (the original fixed camera-window crop a player actually sees in-game) — useful for checking the exact in-game framing. Switching mode while Play is active keeps playback running smoothly with no jump or reset. Not shown for a 3D (model-based) stage, which always uses the game-window framing.
+
 ## [0.12.0] - 2026-09-18
 
 ### Added

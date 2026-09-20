@@ -309,6 +309,11 @@ export function renderBackgroundPreview(
   let rowStatusSpansByIndex = new Map<number, HTMLElement>();
   let playbackState: PlaybackState = INITIAL_PLAYBACK_STATE;
   let isPlaying = false;
+  // Backlog item 014: which sizing this 2D stage's canvas uses. Irrelevant
+  // for a 3D (hasModelLayer) stage — rebuildPlanAndDraw's own condition
+  // below already forces the fixed-window path for that case regardless of
+  // this value, and the toggle controlling it is never even rendered then.
+  let viewMode: "overview" | "game-window" = "overview";
   let lastFrameTimestamp: number | null = null;
   let rafHandle: number | null = null;
   // Backlog item 013: the last canvas extent actually applied, so a resize
@@ -334,11 +339,19 @@ export function renderBackgroundPreview(
 
     let width: number;
     let height: number;
-    if (hasModelLayer) {
+    if (hasModelLayer || viewMode === "game-window") {
       // Backlog item 013: a 3D model-based stage's `stack` container also
       // hosts the independent 3D `<wuik-viewport-3d>` layer — resizing it
       // for a 2D overview would reshape that layer too. Out of scope here;
       // stays exactly at today's fixed local-coordinate-space window.
+      //
+      // Backlog item 014: a 2D stage explicitly switched to "game window"
+      // mode shares this exact branch — same fixed window, same untranslated
+      // `rawPlan` — since that mode is defined as reproducing byte-for-byte
+      // the original pre-item-013 rendering. A 3D stage always takes this
+      // branch regardless of `viewMode`, which is how the toggle (never
+      // rendered for a 3D stage in the first place) is "forced" to
+      // game-window without needing its own separate flag.
       width = loadedStage.bgDef.localCoordWidth;
       height = loadedStage.bgDef.localCoordHeight;
       plan = rawPlan;
@@ -563,16 +576,67 @@ export function renderBackgroundPreview(
     localeRefreshers.push(refreshAllRowTexts);
     list.appendChild(built.list);
 
-    const controls = document.createElement("div");
+    const controls = document.createElement("wuik-toolbar");
     controls.className = "background-preview__controls";
     controls.appendChild(playPauseButton);
+
+    // Backlog item 014: the overview/game-window toggle only makes sense
+    // for a 2D stage — a 3D stage's `stack` hosts its own independent 3D
+    // viewport with no bounding-box concept, so the control is not rendered
+    // at all (never just disabled) rather than offering a choice that can
+    // never do anything for that stage.
+    if (!hasModelLayer) {
+      const viewModeGroup = document.createElement("wuik-radio-group");
+      viewModeGroup.setAttribute("value", viewMode);
+      viewModeGroup.setAttribute(
+        "label",
+        t("background.viewModeLabel", "View"),
+      );
+
+      const overviewOption = document.createElement("wuik-radio-option");
+      overviewOption.setAttribute("value", "overview");
+      overviewOption.textContent = t("background.viewModeOverview", "Overview");
+
+      const gameWindowOption = document.createElement("wuik-radio-option");
+      gameWindowOption.setAttribute("value", "game-window");
+      gameWindowOption.textContent = t(
+        "background.viewModeGameWindow",
+        "Game window",
+      );
+
+      viewModeGroup.append(overviewOption, gameWindowOption);
+      viewModeGroup.addEventListener("wuik-change", (event) => {
+        const next = (event as CustomEvent<{ value: string }>).detail.value;
+        if (next !== "overview" && next !== "game-window") return;
+        if (next === viewMode) return;
+        viewMode = next;
+        rebuildPlanAndDraw();
+      });
+      localeRefreshers.push(() => {
+        viewModeGroup.setAttribute(
+          "label",
+          t("background.viewModeLabel", "View"),
+        );
+        overviewOption.textContent = t(
+          "background.viewModeOverview",
+          "Overview",
+        );
+        gameWindowOption.textContent = t(
+          "background.viewModeGameWindow",
+          "Game window",
+        );
+      });
+
+      controls.appendChild(viewModeGroup);
+    }
+
     list.appendChild(controls);
 
     canvas.hidden = false;
     // Canvas sizing (backlog item 013's overview-mode bounding box, or the
-    // fixed window for a 3D stage) and the matching viewport re-fit both
-    // happen inside rebuildPlanAndDraw now, exactly the same way a
-    // playback tick triggers them.
+    // fixed window for a 3D stage or backlog item 014's "game window" mode)
+    // and the matching viewport re-fit both happen inside rebuildPlanAndDraw
+    // now, exactly the same way a playback tick triggers them.
     rebuildPlanAndDraw();
   }
 

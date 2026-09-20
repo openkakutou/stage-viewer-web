@@ -122,7 +122,14 @@ flowchart LR
   never reset on a redraw whose visible extent didn't change. A stage with
   a 3D model layer is explicitly excluded from this resizing (its
   container also hosts the independent 3D viewport) and keeps the fixed
-  declared screen size unconditionally.
+  declared screen size unconditionally. Backlog item 014 adds an explicit
+  `<wuik-radio-group>` toggle (promoted alongside the Play/Pause button into
+  a `<wuik-toolbar>`) between this overview sizing and a "game window" mode
+  reproducing that same pre-013 fixed declared screen size — the closure-
+  scoped `viewMode` it drives shares the exact same fixed-window branch a 3D
+  stage already forces unconditionally, so a 3D stage's toggle-less,
+  always-fixed behavior falls out of that shared condition rather than a
+  separate code path. The toggle is not rendered at all for a 3D stage.
 
 ## WebAssembly dependency
 

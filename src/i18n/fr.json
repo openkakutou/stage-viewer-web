@@ -47,7 +47,10 @@
     "rowSummary": "{{name}} · {{type}} · calque {{layerNo}} · ({{startX}}, {{startY}})",
     "statusNoAnimation": "aucun bloc d'animation correspondant",
     "statusUnresolvedSprite": "le sprite résolu est hors limites",
-    "statusInvalidSprite": "référence de sprite invalide"
+    "statusInvalidSprite": "référence de sprite invalide",
+    "viewModeLabel": "Affichage",
+    "viewModeOverview": "Vue d'ensemble",
+    "viewModeGameWindow": "Fenêtre de jeu"
   },
   "model": {
     "unavailableHeading": "Aperçu 3D indisponible",

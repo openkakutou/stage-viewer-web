@@ -837,3 +837,263 @@ describe("renderBackgroundPreview — overview-mode canvas sizing (backlog item 
     expect(resetToFit).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("renderBackgroundPreview — overview/game-window view toggle (backlog item 014)", () => {
+  function stageWithBounds(
+    elements: BGElement[],
+    overrides: Partial<
+      Pick<StageData, "cameraBounds" | "stageBoundaries">
+    > = {},
+  ): StageData {
+    return { ...stageWith(elements), ...overrides };
+  }
+
+  function findPlayButton(root: HTMLElement): HTMLElement {
+    const button = Array.from(root.querySelectorAll("wuik-button")).find(
+      (el) => el.textContent === "Play" || el.textContent === "Pause",
+    );
+    if (!button) throw new Error("play/pause button not found");
+    return button as HTMLElement;
+  }
+
+  function findViewModeGroup(root: HTMLElement): HTMLElement {
+    const group = root.querySelector("wuik-radio-group");
+    if (!group) throw new Error("view mode radio group not found");
+    return group as HTMLElement;
+  }
+
+  function changeViewMode(group: HTMLElement, value: string): void {
+    group.setAttribute("value", value);
+    group.dispatchEvent(
+      new CustomEvent("wuik-change", { detail: { value }, bubbles: true }),
+    );
+  }
+
+  it("shows the overview/game-window toggle, defaulting to overview, for a 2D stage", async () => {
+    const root = document.createElement("div");
+    const stage = stageWithBounds([element({ startX: 1000, startY: 1000 })]);
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+    });
+    await vi.waitFor(() => {
+      expect(root.querySelector<HTMLCanvasElement>("canvas")?.hidden).toBe(
+        false,
+      );
+    });
+
+    const group = findViewModeGroup(root);
+    expect(group.getAttribute("value")).toBe("overview");
+    const options = Array.from(
+      root.querySelectorAll("wuik-radio-option"),
+    ) as HTMLElement[];
+    expect(options.map((o) => o.getAttribute("value"))).toEqual([
+      "overview",
+      "game-window",
+    ]);
+  });
+
+  it("does not render the toggle for a 3D (hasModelLayer) stage, always using the fixed window", async () => {
+    const root = document.createElement("div");
+    const stage = stageWithBounds([element({ startX: 5000, startY: 5000 })]);
+    const renderModelPreview = vi.fn();
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+      renderModelPreview,
+      modelAssets: {
+        status: "success",
+        modelBytes: new Uint8Array([1]),
+        modelFileName: "stage.glb",
+        environmentBytes: null,
+        environmentFileName: null,
+      },
+    });
+    await vi.waitFor(() => {
+      expect(root.querySelector<HTMLCanvasElement>("canvas")?.hidden).toBe(
+        false,
+      );
+    });
+
+    expect(root.querySelector("wuik-radio-group")).toBeNull();
+    const canvas = root.querySelector<HTMLCanvasElement>("canvas");
+    expect(canvas?.width).toBe(320);
+    expect(canvas?.height).toBe(240);
+  });
+
+  it("switching to game-window mode resizes the canvas to the fixed local coordinate window with no translation", async () => {
+    const root = document.createElement("div");
+    const stage = stageWithBounds([element({ startX: 1000, startY: 1000 })]);
+    const drawComposition = vi.fn();
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+      drawComposition,
+    });
+    await vi.waitFor(() => {
+      expect(drawComposition).toHaveBeenCalled();
+    });
+
+    const canvas = root.querySelector<HTMLCanvasElement>("canvas");
+    // Overview mode: expanded well past the fixed 320x240 window.
+    expect(canvas?.width).toBeGreaterThan(320);
+
+    const group = findViewModeGroup(root);
+    drawComposition.mockClear();
+    changeViewMode(group, "game-window");
+
+    await vi.waitFor(() => {
+      expect(drawComposition).toHaveBeenCalled();
+    });
+    expect(canvas?.width).toBe(320);
+    expect(canvas?.height).toBe(240);
+
+    // No bounding-box translation: the plan drawn in game-window mode places
+    // the element at exactly the position buildDrawPlan alone would have
+    // produced (stageXToCanvasX(1000, 320) = 160 + 1000 on X, untouched on
+    // Y), not shifted by a bbox origin the way overview mode would.
+    const call = drawComposition.mock.calls[0];
+    const plan = call?.[1] as { x: number; y: number }[];
+    expect(plan[0]?.x).toBe(1160);
+    expect(plan[0]?.y).toBe(1000);
+  });
+
+  it("switching back to overview mode re-expands the canvas to the content bounding box", async () => {
+    const root = document.createElement("div");
+    const stage = stageWithBounds([element({ startX: 1000, startY: 1000 })]);
+    const drawComposition = vi.fn();
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+      drawComposition,
+    });
+    await vi.waitFor(() => {
+      expect(drawComposition).toHaveBeenCalled();
+    });
+
+    const group = findViewModeGroup(root);
+    changeViewMode(group, "game-window");
+    await vi.waitFor(() => {
+      const canvas = root.querySelector<HTMLCanvasElement>("canvas");
+      expect(canvas?.width).toBe(320);
+    });
+
+    changeViewMode(group, "overview");
+    await vi.waitFor(() => {
+      const canvas = root.querySelector<HTMLCanvasElement>("canvas");
+      expect(canvas?.width).toBeGreaterThan(320);
+    });
+  });
+
+  it("re-dispatching the same already-active mode is a no-op (no extra redraw)", async () => {
+    const root = document.createElement("div");
+    const stage = stageWithBounds([element({ startX: 1000, startY: 1000 })]);
+    const drawComposition = vi.fn();
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+      drawComposition,
+    });
+    await vi.waitFor(() => {
+      expect(drawComposition).toHaveBeenCalled();
+    });
+
+    const group = findViewModeGroup(root);
+    drawComposition.mockClear();
+    changeViewMode(group, "overview"); // already active
+    expect(drawComposition).not.toHaveBeenCalled();
+  });
+
+  it("toggling mode while playing keeps playback running with no error, in both directions", async () => {
+    const root = document.createElement("div");
+    const stage = stageWith(
+      [element({ type: "anim", actionNumber: 5, startX: 1000 })],
+      {
+        "5": {
+          frames: [{ sprite: { group: 0, image: 0 }, time: 10 }],
+          loopStart: 0,
+        },
+      },
+    );
+    const drawComposition = vi.fn();
+    let queued: FrameRequestCallback | null = null;
+    const requestAnimationFrame = vi.fn((cb: FrameRequestCallback) => {
+      queued = cb;
+      return 1;
+    });
+    const cancelAnimationFrame = vi.fn(() => {
+      queued = null;
+    });
+    const fire = (timestamp: number) => {
+      const cb = queued;
+      queued = null;
+      cb?.(timestamp);
+    };
+    const resolveAnimationFrames = vi
+      .fn()
+      .mockResolvedValue({ ok: true, sprites: [{ group: 0, image: 0 }] });
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+      resolveAnimationFrames,
+      drawComposition,
+      requestAnimationFrame,
+      cancelAnimationFrame,
+    });
+    await vi.waitFor(() => {
+      expect(drawComposition).toHaveBeenCalled();
+    });
+
+    findPlayButton(root).click();
+    const group = findViewModeGroup(root);
+    changeViewMode(group, "game-window");
+
+    drawComposition.mockClear();
+    fire(16);
+    await vi.waitFor(() => {
+      expect(drawComposition).toHaveBeenCalled();
+    });
+
+    changeViewMode(group, "overview");
+    drawComposition.mockClear();
+    fire(32);
+    await vi.waitFor(() => {
+      expect(drawComposition).toHaveBeenCalled();
+    });
+
+    expect(findPlayButton(root).textContent).toBe("Pause");
+  });
+
+  it("re-translates the view mode toggle's labels in place on a live locale change", async () => {
+    const root = document.createElement("div");
+    const stage = stageWithBounds([element({ startX: 1000, startY: 1000 })]);
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+    });
+    await vi.waitFor(() => {
+      expect(root.querySelector("wuik-radio-group")).not.toBeNull();
+    });
+
+    const options = Array.from(
+      root.querySelectorAll("wuik-radio-option"),
+    ) as HTMLElement[];
+    expect(options[0]?.textContent).toBe("Overview");
+    expect(options[1]?.textContent).toBe("Game window");
+
+    const instance = await initAppI18n();
+    await instance.changeLanguage("fr");
+
+    expect(options[0]?.textContent).toBe("Vue d'ensemble");
+    expect(options[1]?.textContent).toBe("Fenêtre de jeu");
+
+    await instance.changeLanguage("en");
+  });
+});

@@ -47,7 +47,10 @@
     "rowSummary": "{{name}} · {{type}} · layer {{layerNo}} · ({{startX}}, {{startY}})",
     "statusNoAnimation": "no matching animation block",
     "statusUnresolvedSprite": "resolved sprite is out of range",
-    "statusInvalidSprite": "invalid sprite reference"
+    "statusInvalidSprite": "invalid sprite reference",
+    "viewModeLabel": "View",
+    "viewModeOverview": "Overview",
+    "viewModeGameWindow": "Game window"
   },
   "model": {
     "unavailableHeading": "3D preview unavailable",
