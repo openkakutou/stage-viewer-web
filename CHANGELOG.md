@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-09-20
+
 ### Added
 
 - The composed background preview for a 2D stage now has a "view" toggle between "Overview" (the whole stage content, the existing default) and "Game window" (the original fixed camera-window crop a player actually sees in-game) — useful for checking the exact in-game framing. Switching mode while Play is active keeps playback running smoothly with no jump or reset. Not shown for a 3D (model-based) stage, which always uses the game-window framing.
@@ -83,7 +85,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The app now uses the shared OpenKakutou design system for its layout and visual style, and can load a stage file (background, camera, and layer data) through the underlying stage library — the on-screen file loading and preview screens themselves come in later updates.
 
-[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.9.0...v0.10.0
