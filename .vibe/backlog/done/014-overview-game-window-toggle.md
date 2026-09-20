@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 depends_on: [013]
 ---
 # Add an Overview / Game-Window View Toggle
@@ -15,10 +15,10 @@ Item 013 makes the background preview always render in "overview" sizing (the st
 - New i18n keys (`src/i18n/en.json`/`fr.json`, `background.*` namespace, same structure as the existing `background.play`/`background.pause`): `background.viewModeLabel`, `background.viewModeOverview`, `background.viewModeGameWindow`.
 
 ## Acceptance Criteria
-- [ ] The toggle is visible in the background preview's controls (as a `<wuik-radio-group>` with "overview"/"game window" options) whenever the stage is not 3D, and hidden/disabled for a 3D (`hasModelLayer`) stage.
-- [ ] Switching to "overview" shows the full stage content per item 013; switching to "game window" reproduces exactly today's original fixed `localCoordWidth × localCoordHeight` rendering, confirmed pixel-equivalent in a real-browser check.
-- [ ] Toggling mode while Play is active keeps playback (parallax pan) working correctly in both modes, with no visual jump or broken state.
-- [ ] Both new labels render through the existing i18n system (`en.json`/`fr.json`), matching the app's existing key-naming convention for this file.
+- [x] The toggle is visible in the background preview's controls (as a `<wuik-radio-group>` with "overview"/"game window" options) whenever the stage is not 3D, and hidden/disabled for a 3D (`hasModelLayer`) stage.
+- [x] Switching to "overview" shows the full stage content per item 013; switching to "game window" reproduces exactly today's original fixed `localCoordWidth × localCoordHeight` rendering, confirmed pixel-equivalent in a real-browser check.
+- [x] Toggling mode while Play is active keeps playback (parallax pan) working correctly in both modes, with no visual jump or broken state.
+- [x] Both new labels render through the existing i18n system (`en.json`/`fr.json`), matching the app's existing key-naming convention for this file.
 
 ## Notes
 Requires item 013 (overview-mode canvas sizing) to exist first, since this item's "game window" branch is defined as "the same sizing item 013 introduced, but with the pre-013 fixed-window values instead."
