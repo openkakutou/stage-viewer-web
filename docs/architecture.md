@@ -224,6 +224,17 @@ offscreen-canvas-plus-`drawImage` scaling path when the two actually
 differ, leaving the pre-existing unscaled `putImageData` output
 byte-for-byte untouched otherwise.
 
+A `.def` whose `[StageInfo]` section omits `localcoord` entirely hits the
+same zero-value landmine (`stage`'s Go parser leaves
+`BGdef.localCoordWidth/Height` at `0` rather than applying MUGEN/Ikemen's
+own documented `320x240` default) — trusting the raw value used to
+collapse the whole composed preview to a literal 0x0 canvas for an
+otherwise valid stage. `resolveLocalCoordSize` (backlog item 016) guards
+it the same way `resolveBgScale`/`resolveCameraParams` already do;
+`background-preview.ts` resolves it once per render into a local
+`localCoordSize` binding used at every canvas-sizing/composition call
+site, rather than re-guarding at each one individually.
+
 ## Animated BG playback
 
 Every element's drawn position is offset by a simulated camera
