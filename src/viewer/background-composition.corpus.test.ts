@@ -31,6 +31,7 @@ import {
   buildDrawPlan,
   classifyAnimationElements,
   collectSpriteRequests,
+  resolveLocalCoordSize,
   spriteRequestKey,
 } from "./background-composition.ts";
 
@@ -63,14 +64,18 @@ function nonOverlapDistanceRatio(
 }
 
 /**
- * A `[StageInfo]` `localcoord` this repo has never seen populated: `stage`
- * leaves `LocalCoordWidth`/`LocalCoordHeight` at the Go zero value `0` when
- * a `.def`'s `[StageInfo]` section omits `localcoord` entirely (confirmed
- * against 7 real corpus files during this item's own development — see
- * docs/testing.md). A zero-size local coordinate space is nonsensical on
- * its own regardless of any element: `background-preview.ts` sizes its
- * canvas directly from these fields, so this collapses the whole preview
- * to a literal 0x0 canvas.
+ * A `[StageInfo]` `localcoord` this repo has seen populated as the Go zero
+ * value `0` when a `.def`'s `[StageInfo]` section omits `localcoord`
+ * entirely (confirmed against 7 real corpus files during backlog item 010's
+ * own development — see docs/testing.md). A zero-size local coordinate
+ * space is nonsensical on its own regardless of any element:
+ * `background-preview.ts` used to size its canvas directly from these raw
+ * fields, collapsing the whole preview to a literal 0x0 canvas — backlog
+ * item 016 fixed this by falling back to MUGEN/Ikemen GO's own documented
+ * `320x240` default (`resolveLocalCoordSize`) at the point of use, so
+ * `checkStageFile` below runs this check (and every composition call after
+ * it) against the same resolved size the real app now actually renders
+ * with, not the raw `.def` field.
  */
 function isLocalCoordDegenerate(
   localCoordWidth: number,
@@ -328,17 +333,17 @@ async function checkStageFile(defPath: string): Promise<StageCheckOutcome> {
     return { status: "skipped", reason: `failed to parse: ${result.error}` };
   }
   const stage = result.stage;
+  // Backlog item 016: judge the same resolved size the real app renders
+  // with (a raw 0x0 `.def` field falls back to MUGEN/Ikemen GO's 320x240
+  // default), not the raw `.def` field — a `.def` genuinely omitting
+  // `localcoord` is expected, no longer a degenerate stage.
+  const localCoordSize = resolveLocalCoordSize(stage.bgDef);
 
-  if (
-    isLocalCoordDegenerate(
-      stage.bgDef.localCoordWidth,
-      stage.bgDef.localCoordHeight,
-    )
-  ) {
+  if (isLocalCoordDegenerate(localCoordSize.width, localCoordSize.height)) {
     return {
       status: "failed",
       problems: [
-        `localCoordWidth/localCoordHeight is ${stage.bgDef.localCoordWidth}x${stage.bgDef.localCoordHeight} — a zero-size local coordinate space collapses the whole composed preview to nothing`,
+        `resolved local coordinate size is ${localCoordSize.width}x${localCoordSize.height} (raw .def localcoord: ${stage.bgDef.localCoordWidth}x${stage.bgDef.localCoordHeight}) — a zero-size local coordinate space collapses the whole composed preview to nothing`,
       ],
     };
   }
@@ -446,7 +451,7 @@ async function checkStageFile(defPath: string): Promise<StageCheckOutcome> {
     elements,
     spriteMetaByKey,
     pixelsByKey,
-    stage.bgDef.localCoordWidth,
+    localCoordSize.width,
     { x: 0, y: 0 },
     animationStatusByElementIndex,
     { x: stage.bgDef.xScale, y: stage.bgDef.yScale },
@@ -458,13 +463,13 @@ async function checkStageFile(defPath: string): Promise<StageCheckOutcome> {
     if (
       isDrawBoundsNonsensical(
         command,
-        stage.bgDef.localCoordWidth,
-        stage.bgDef.localCoordHeight,
+        localCoordSize.width,
+        localCoordSize.height,
       )
     ) {
       const element = elements[command.elementIndex];
       problems.push(
-        `element "${element?.name ?? command.elementIndex}" (index ${command.elementIndex}): drawn at ${command.width}x${command.height} px, position (${command.x}, ${command.y}), vs. local coord ${stage.bgDef.localCoordWidth}x${stage.bgDef.localCoordHeight}`,
+        `element "${element?.name ?? command.elementIndex}" (index ${command.elementIndex}): drawn at ${command.width}x${command.height} px, position (${command.x}, ${command.y}), vs. local coord ${localCoordSize.width}x${localCoordSize.height}`,
       );
     }
   }

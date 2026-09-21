@@ -52,6 +52,7 @@ import {
   buildDrawPlan,
   classifyAnimationElements,
   collectSpriteRequests,
+  resolveLocalCoordSize,
   spriteRequestKey,
 } from "./background-composition.ts";
 import {
@@ -139,6 +140,14 @@ export function renderBackgroundPreview(
   // the early return above doesn't survive into a nested function over the
   // wider-typed parameter.
   const loadedStage = stage;
+  // Backlog item 016: a `.def` whose `[StageInfo]` section omits
+  // `localcoord` entirely leaves `bgDef.localCoordWidth`/`localCoordHeight`
+  // at `stage`'s own Go zero value `0` rather than MUGEN/Ikemen GO's
+  // documented `320x240` default. Resolved once here, before every use
+  // below (canvas sizing, aspect ratio, composition math), rather than
+  // reading `loadedStage.bgDef.localCoordWidth`/`localCoordHeight` raw at
+  // each call site.
+  const localCoordSize = resolveLocalCoordSize(loadedStage.bgDef);
 
   const modelAssets = options.modelAssets ?? { status: "none" as const };
   const renderModelPreviewFn =
@@ -230,7 +239,7 @@ export function renderBackgroundPreview(
     // none of the 2D list/canvas/playback machinery below applies.
     const stack = document.createElement("div");
     stack.className = "background-preview__stack";
-    stack.style.aspectRatio = `${loadedStage.bgDef.localCoordWidth} / ${loadedStage.bgDef.localCoordHeight}`;
+    stack.style.aspectRatio = `${localCoordSize.width} / ${localCoordSize.height}`;
     root.appendChild(stack);
     mountModelLayer(stack);
     appendModeBadge(stack);
@@ -280,7 +289,7 @@ export function renderBackgroundPreview(
 
   const stack = document.createElement("div");
   stack.className = "background-preview__stack";
-  stack.style.aspectRatio = `${loadedStage.bgDef.localCoordWidth} / ${loadedStage.bgDef.localCoordHeight}`;
+  stack.style.aspectRatio = `${localCoordSize.width} / ${localCoordSize.height}`;
 
   const viewport = document.createElement("wuik-viewport");
   viewport.className = "background-preview__viewport";
@@ -344,7 +353,7 @@ export function renderBackgroundPreview(
       elements,
       spriteMetaByKey,
       pixelsByKey,
-      loadedStage.bgDef.localCoordWidth,
+      localCoordSize.width,
       { x: playbackState.cameraX, y: 0 },
       animationStatusByElementIndex,
       { x: loadedStage.bgDef.xScale, y: loadedStage.bgDef.yScale },
@@ -365,14 +374,14 @@ export function renderBackgroundPreview(
       // branch regardless of `viewMode`, which is how the toggle (never
       // rendered for a 3D stage in the first place) is "forced" to
       // game-window without needing its own separate flag.
-      width = loadedStage.bgDef.localCoordWidth;
-      height = loadedStage.bgDef.localCoordHeight;
+      width = localCoordSize.width;
+      height = localCoordSize.height;
       plan = rawPlan;
     } else {
       const bbox = computeStageBoundingBox(
         rawPlan,
-        loadedStage.bgDef.localCoordWidth,
-        loadedStage.bgDef.localCoordHeight,
+        localCoordSize.width,
+        localCoordSize.height,
         loadedStage.cameraBounds,
         loadedStage.stageBoundaries,
       );

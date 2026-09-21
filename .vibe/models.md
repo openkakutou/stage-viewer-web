@@ -21,7 +21,7 @@ Defined in: `src/wasm/types.ts`
 | Field | Type | Notes |
 |---|---|---|
 | spriteFile | string | Path to the stage's `.sff` sprite sheet |
-| localCoordWidth, localCoordHeight | number | Coordinate space element positions are expressed in |
+| localCoordWidth, localCoordHeight | number | Coordinate space element positions are expressed in. A `.def` with no `[StageInfo]` section, or one that omits `localcoord`, leaves both at the raw `0` — consumers resolve through `background-composition.ts`'s `resolveLocalCoordSize` (backlog item 016), which falls back to MUGEN/Ikemen GO's own documented `320x240` default per dimension, never this raw value directly |
 | zOffset | number | Ground level's vertical distance from the top of the local coordinate space |
 | zoomOut, zoomIn | number | Camera's zoom scale range |
 | modelFile | string | Path to a 3D model file — Ikemen GO extension, empty for a 2D stage |

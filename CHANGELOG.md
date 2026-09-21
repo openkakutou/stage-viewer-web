@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A stage whose file omits its coordinate space now renders its composed background preview at the standard 320x240 default instead of collapsing to a blank canvas.
+
 ## [0.13.1] - 2026-09-21
 
 ### Fixed

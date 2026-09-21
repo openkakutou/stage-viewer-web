@@ -12,6 +12,7 @@ import {
   collectSpriteRequests,
   computeSpriteTopLeft,
   resolveBgScale,
+  resolveLocalCoordSize,
   resolveParallaxPosition,
   sortElementsForComposition,
   spriteRequestKey,
@@ -877,5 +878,40 @@ describe("resolveBgScale", () => {
 
   it("defaults a non-numeric (NaN) scale to 1", () => {
     expect(resolveBgScale(Number.NaN)).toBe(1);
+  });
+});
+
+describe("resolveLocalCoordSize", () => {
+  it("passes through a declared positive localcoord unchanged", () => {
+    expect(
+      resolveLocalCoordSize({ localCoordWidth: 640, localCoordHeight: 480 }),
+    ).toEqual({
+      width: 640,
+      height: 480,
+    });
+  });
+
+  it("defaults a zero-value localcoord (stage's own zero-value when [StageInfo] omits localcoord entirely) to MUGEN/Ikemen's 320x240", () => {
+    expect(
+      resolveLocalCoordSize({ localCoordWidth: 0, localCoordHeight: 0 }),
+    ).toEqual({
+      width: 320,
+      height: 240,
+    });
+  });
+
+  it("defaults only the dimension that is degenerate, keeping the other one declared", () => {
+    expect(
+      resolveLocalCoordSize({ localCoordWidth: 640, localCoordHeight: 0 }),
+    ).toEqual({ width: 640, height: 240 });
+  });
+
+  it("defaults a negative or non-numeric (NaN) localcoord dimension the same way as zero", () => {
+    expect(
+      resolveLocalCoordSize({
+        localCoordWidth: -10,
+        localCoordHeight: Number.NaN,
+      }),
+    ).toEqual({ width: 320, height: 240 });
   });
 });

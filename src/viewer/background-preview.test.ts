@@ -857,6 +857,78 @@ describe("renderBackgroundPreview — overview-mode canvas sizing (backlog item 
   });
 });
 
+describe("renderBackgroundPreview — missing localcoord fallback (backlog item 016)", () => {
+  function stageWithMissingLocalcoord(elements: BGElement[]): StageData {
+    const stage = stageWith(elements);
+    return {
+      ...stage,
+      bgDef: { ...stage.bgDef, localCoordWidth: 0, localCoordHeight: 0 },
+    };
+  }
+
+  it("renders the composed background at MUGEN/Ikemen's 320x240 default instead of collapsing to a 0x0 canvas", async () => {
+    const root = document.createElement("div");
+    const stage = stageWithMissingLocalcoord([element()]);
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+    });
+    await vi.waitFor(() => {
+      expect(root.querySelector<HTMLCanvasElement>("canvas")?.hidden).toBe(
+        false,
+      );
+    });
+
+    const canvas = root.querySelector<HTMLCanvasElement>("canvas");
+    const stack = root.querySelector<HTMLElement>(".background-preview__stack");
+    expect(canvas?.width).toBe(320);
+    expect(canvas?.height).toBe(240);
+    expect(stack?.style.aspectRatio).toBe("320 / 240");
+  });
+
+  it("still renders a model-based stage's stack at 320x240 (not 0x0) when its own [StageInfo] also omits localcoord", () => {
+    const root = document.createElement("div");
+    const stage = stageWithMissingLocalcoord(null);
+    const renderModelPreview = vi.fn();
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      renderModelPreview,
+      modelAssets: {
+        status: "success",
+        modelBytes: new Uint8Array([1]),
+        modelFileName: "stage.glb",
+        environmentBytes: null,
+        environmentFileName: null,
+      },
+    });
+
+    const stack = root.querySelector<HTMLElement>(".background-preview__stack");
+    expect(stack?.style.aspectRatio).toBe("320 / 240");
+  });
+
+  it("continues to render with an explicitly declared, non-default localcoord unchanged", async () => {
+    const root = document.createElement("div");
+    const stage = stageWith([element()]);
+    stage.bgDef.localCoordWidth = 640;
+    stage.bgDef.localCoordHeight = 480;
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+    });
+    await vi.waitFor(() => {
+      expect(root.querySelector<HTMLCanvasElement>("canvas")?.hidden).toBe(
+        false,
+      );
+    });
+
+    const canvas = root.querySelector<HTMLCanvasElement>("canvas");
+    expect(canvas?.width).toBe(640);
+    expect(canvas?.height).toBe(480);
+  });
+});
+
 describe("renderBackgroundPreview — overview/game-window view toggle (backlog item 014)", () => {
   function stageWithBounds(
     elements: BGElement[],

@@ -33,6 +33,45 @@ export function resolveBgScale(rawScale: number): number {
   return rawScale > 0 ? rawScale : 1;
 }
 
+/** MUGEN/Ikemen GO's own documented default local coordinate space, used when a `.def`'s `[StageInfo]` section omits `localcoord` entirely (see `resolveLocalCoordSize`). */
+const DEFAULT_LOCAL_COORD_WIDTH = 320;
+const DEFAULT_LOCAL_COORD_HEIGHT = 240;
+
+export interface LocalCoordSize {
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * Resolves a stage's declared `[StageInfo]` `localcoord` (`BGdef`'s
+ * `localCoordWidth`/`localCoordHeight`) to the size actually used when
+ * sizing/composing the preview, guarding against the same class of
+ * zero-value landmine `resolveBgScale`/`resolveCameraParams` already guard
+ * elsewhere: a `.def` with no `[StageInfo]` section at all (or one that
+ * omits `localcoord` specifically) leaves these fields at the Go zero value
+ * `0` rather than MUGEN/Ikemen GO's own documented `320,240` default —
+ * trusting that raw `0` collapses the whole composed preview to a literal
+ * 0x0 canvas for an otherwise valid, real stage (backlog item 016; 7 real
+ * corpus stages hit this). Each dimension is defaulted independently, and a
+ * negative or non-numeric (NaN) value is equally nonsensical as a
+ * coordinate-space size, so it falls back the same way.
+ */
+export function resolveLocalCoordSize(bgDef: {
+  localCoordWidth: number;
+  localCoordHeight: number;
+}): LocalCoordSize {
+  return {
+    width:
+      bgDef.localCoordWidth > 0
+        ? bgDef.localCoordWidth
+        : DEFAULT_LOCAL_COORD_WIDTH,
+    height:
+      bgDef.localCoordHeight > 0
+        ? bgDef.localCoordHeight
+        : DEFAULT_LOCAL_COORD_HEIGHT,
+  };
+}
+
 /**
  * The top-left canvas position to draw a decoded sprite at, so that the
  * sprite's own axis (pivot) point lands exactly on the element's
