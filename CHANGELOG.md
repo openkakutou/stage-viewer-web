@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-09-21
+
 ### Fixed
 
 - Loading a stage folder, decoding its sprites, or loading its 3D model/environment now shows a visible spinner instead of plain text only — the screen no longer looks blank or broken while a stage loads.
@@ -89,7 +91,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The app now uses the shared OpenKakutou design system for its layout and visual style, and can load a stage file (background, camera, and layer data) through the underlying stage library — the on-screen file loading and preview screens themselves come in later updates.
 
-[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/openkakutou/stage-viewer-web/compare/v0.13.1...HEAD
+[0.13.1]: https://github.com/openkakutou/stage-viewer-web/compare/v0.13.0...v0.13.1
 [0.13.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/openkakutou/stage-viewer-web/compare/v0.10.0...v0.11.0

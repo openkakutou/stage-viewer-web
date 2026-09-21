@@ -58,7 +58,9 @@ flowchart LR
   split out so `model-assets.ts` (backlog item 006, below) can reuse both
   without an import cycle back into `stage-file-input.ts`.
   `stage-file-input-view.ts` renders the folder-picker + drag-and-drop UI
-  and the multi-candidate/error/success states on top of that logic.
+  and the multi-candidate/error/success states on top of that logic,
+  showing a `<wuik-spinner>` (backlog item 015) alongside its status text
+  while reading/loading the picked folder.
   `model-assets.ts` resolves a 3D model-based stage's referenced model/
   `.hdr` files the same way, but never blocks the overall load on failure
   — see "3D model-based stage preview" below.
@@ -106,7 +108,11 @@ flowchart LR
   the model/environment, builds the scene, and renders it into
   `web-ui-kit`'s `<wuik-viewport-3d>` — see "3D model-based stage preview"
   below. `background-preview.ts` mounts it as an extra layer, behind its
-  own canvas, when the loaded stage has one. `background-bounds.ts`
+  own canvas, when the loaded stage has one. Both `background-preview.ts`
+  and `model-preview.ts` show a `<wuik-spinner>` (backlog item 015)
+  alongside their own status text while their async decode/load is in
+  progress — `model-preview.ts` had no loading indicator at all before
+  this item. `background-bounds.ts`
   (backlog item 012) is a further pure module computing the real content
   bounding box — every drawn `DrawCommand` unioned with the stage's own
   `cameraBounds`/`stageBoundaries` — kept separate from
