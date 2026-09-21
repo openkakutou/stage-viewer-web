@@ -1,5 +1,5 @@
 ---
-status: todo
+status: done
 ---
 # Show a Visual Loading Spinner During Stage Load and Sprite Decode
 
