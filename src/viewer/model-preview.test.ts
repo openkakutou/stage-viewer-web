@@ -214,6 +214,37 @@ describe("renderModelPreview — success path", () => {
     expect(loadGLTF).toHaveBeenCalledWith(modelBytes);
   });
 
+  it("shows a loading spinner from the moment the viewport mounts, removed once the first frame renders", async () => {
+    const root = document.createElement("div");
+    const renderer = fakeRenderer();
+    const createRenderer = vi.fn().mockReturnValue(renderer);
+    let resolveGLTF: (value: { scene: unknown }) => void = () => {};
+    const loadGLTF = vi.fn().mockReturnValue(
+      new Promise((resolve) => {
+        resolveGLTF = resolve;
+      }),
+    );
+
+    renderModelPreview(
+      root,
+      stage({ bgDef: bgDef({ modelFile: "mystage.glb" }) }),
+      successAssets(),
+      { createRenderer, loadGLTF },
+    );
+
+    const loadingStatus = root.querySelector('[role="status"]');
+    expect(loadingStatus).not.toBeNull();
+    expect(loadingStatus?.querySelector("wuik-spinner")).not.toBeNull();
+
+    const sceneChild = { position: { set: vi.fn() }, scale: { set: vi.fn() } };
+    resolveGLTF({ scene: sceneChild });
+
+    await vi.waitFor(() => {
+      expect(renderer.render).toHaveBeenCalled();
+    });
+    expect(root.querySelector('[role="status"]')).toBeNull();
+  });
+
   it("shows the failure banner when the renderer can't be constructed (no WebGL)", async () => {
     const root = document.createElement("div");
     const createRenderer = vi.fn().mockReturnValue(null);

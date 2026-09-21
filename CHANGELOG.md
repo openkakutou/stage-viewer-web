@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Loading a stage folder, decoding its sprites, or loading its 3D model/environment now shows a visible spinner instead of plain text only — the screen no longer looks blank or broken while a stage loads.
+
 ## [0.13.0] - 2026-09-20
 
 ### Added

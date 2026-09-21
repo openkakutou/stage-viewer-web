@@ -99,6 +99,44 @@ describe("renderStageFileInput", () => {
 
     expect(root.textContent?.toLowerCase()).toContain("folder");
     expect(picker(root).getAttribute("webkitdirectory")).not.toBeNull();
+    expect(status(root).querySelector("wuik-spinner")).not.toBeNull();
+    expect(
+      (status(root).querySelector("wuik-spinner") as HTMLElement).hidden,
+    ).toBe(true);
+  });
+
+  it("shows a spinner while the folder's stage is loading, hides it once resolved", async () => {
+    const onLoaded = vi.fn();
+    const root = document.createElement("div");
+    renderStageFileInput(root, {
+      onLoaded,
+      bridgeOptions: testBridgeOptions,
+    });
+
+    const input = picker(root);
+    Object.defineProperty(input, "files", {
+      value: [
+        withRelativePath(
+          makeFile("stage.def", sampleDefText),
+          "pack/stage.def",
+        ),
+        withRelativePath(
+          makeFile("stage0.sff", "sff-bytes"),
+          "pack/stage0.sff",
+        ),
+      ],
+      configurable: true,
+    });
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+
+    const spinner = status(root).querySelector("wuik-spinner") as HTMLElement;
+    expect(spinner).not.toBeNull();
+    expect(spinner.hidden).toBe(false);
+
+    await vi.waitFor(() => {
+      expect(onLoaded).toHaveBeenCalledTimes(1);
+    });
+    expect(spinner.hidden).toBe(true);
   });
 
   it("auto-loads and reports success when exactly one candidate is picked, with its sprite sheet resolved", async () => {

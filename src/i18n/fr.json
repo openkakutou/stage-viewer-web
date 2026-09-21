@@ -53,6 +53,7 @@
     "viewModeGameWindow": "Fenêtre de jeu"
   },
   "model": {
+    "loadingPreview": "Chargement de l'aperçu 3D…",
     "unavailableHeading": "Aperçu 3D indisponible",
     "modelNotFound": "Le modèle 3D référencé « {{referencedName}} » est introuvable dans le dossier chargé.",
     "modelAmbiguous": "Plusieurs fichiers nommés « {{referencedName}} » ont été trouvés dans le dossier chargé — impossible de déterminer lequel utiliser comme modèle 3D.",

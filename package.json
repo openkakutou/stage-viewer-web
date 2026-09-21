@@ -30,7 +30,7 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "@openkakutou/web-ui-kit": "^0.11.1",
+    "@openkakutou/web-ui-kit": "^0.13.0",
     "three": "^0.185.1"
   }
 }

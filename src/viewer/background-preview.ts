@@ -257,11 +257,24 @@ export function renderBackgroundPreview(
   const status = document.createElement("p");
   status.className = "background-preview__status";
   status.setAttribute("role", "status");
-  status.textContent = t("background.decodingSprites", "Decoding sprites…");
+  // A persistent spinner (decorative — no `label`, this container's own
+  // `role="status"` is the sole accessible name) plus a text span, rather
+  // than overwriting the whole container via `.textContent` — the entire
+  // element is removed at once by `finish()` once decoding is done, so no
+  // hide/show toggle is needed here (unlike stage-file-input-view.ts's
+  // longer-lived status container).
+  const statusSpinner = document.createElement("wuik-spinner");
+  statusSpinner.setAttribute("size", "sm");
+  const statusText = document.createElement("span");
+  statusText.textContent = t("background.decodingSprites", "Decoding sprites…");
+  status.append(statusSpinner, statusText);
   list.appendChild(status);
   localeRefreshers.push(() => {
     if (status.isConnected) {
-      status.textContent = t("background.decodingSprites", "Decoding sprites…");
+      statusText.textContent = t(
+        "background.decodingSprites",
+        "Decoding sprites…",
+      );
     }
   });
 

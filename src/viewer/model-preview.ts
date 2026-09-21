@@ -187,6 +187,28 @@ function describeAssetFailure(
   }
 }
 
+/**
+ * Overlay shown from the moment the 3D viewport mounts until its first
+ * successful render (WebGL renderer creation, glTF parse, and optional
+ * `.hdr` environment decode can all take a moment) — previously this file
+ * showed nothing at all during that window, reading as a blank/broken
+ * screen. A persistent spinner (decorative — no `label`, this container's
+ * own `role="status"` is the sole accessible name) plus a text span,
+ * mirroring the pattern used by the other two loading call sites.
+ */
+function buildLoadingBanner(): { banner: HTMLElement; text: HTMLElement } {
+  const banner = document.createElement("div");
+  banner.className = "model-preview__loading";
+  banner.setAttribute("role", "status");
+  banner.setAttribute("aria-live", "polite");
+  const spinner = document.createElement("wuik-spinner");
+  spinner.setAttribute("size", "lg");
+  const text = document.createElement("span");
+  text.textContent = t("model.loadingPreview", "Loading 3D preview…");
+  banner.append(spinner, text);
+  return { banner, text };
+}
+
 function buildFailureBanner(bodyText: string): HTMLElement {
   const banner = document.createElement("div");
   banner.className = "model-preview__error";
@@ -229,9 +251,19 @@ export function renderModelPreview(
   // state of its own, unlike the three.js setup below. Stays `null` (a
   // no-op locale change) whenever no banner is shown.
   let currentFailureReason: (() => string) | null = null;
+  // Re-translates the loading overlay's text in place (unlike the failure
+  // banner, which is cheap enough to just rebuild wholesale) — `isConnected`
+  // is `false` once the overlay has been removed (success or superseded by
+  // a failure banner), so this is a safe no-op then.
+  let loadingText: HTMLElement | null = null;
   const unsubscribeLocale = onLocaleChange(() => {
     if (currentFailureReason) {
       root.replaceChildren(buildFailureBanner(currentFailureReason()));
+    } else if (loadingText?.isConnected) {
+      loadingText.textContent = t(
+        "model.loadingPreview",
+        "Loading 3D preview…",
+      );
     }
   });
 
@@ -261,6 +293,12 @@ export function renderModelPreview(
   canvas.className = "model-preview__canvas";
   viewport.appendChild(canvas);
   root.appendChild(viewport);
+  // Mounted synchronously, in the same tick as the viewport — before any
+  // async WebGL/glTF/environment work starts — so there is never a blank
+  // frame between "viewport appears" and "loading feedback appears".
+  const loadingBanner = buildLoadingBanner();
+  loadingText = loadingBanner.text;
+  root.appendChild(loadingBanner.banner);
 
   let disposed = false;
   let rafHandle: number | null = null;
@@ -396,6 +434,9 @@ export function renderModelPreview(
     }
 
     renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, 2));
+
+    loadingBanner.banner.remove();
+    loadingText = null;
 
     // Warm-up render, bypassing the demand-gate below on purpose: three.js
     // compiles shaders/materials on first draw, so the first *user-

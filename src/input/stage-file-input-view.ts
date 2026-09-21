@@ -222,6 +222,19 @@ export function renderStageFileInput(
   status.setAttribute("role", "status");
   status.setAttribute("aria-live", "polite");
 
+  // Two persistent children, never rebuilt: the spinner is decorative (no
+  // `label` — this container's own `role="status"` is the sole accessible
+  // name, a second one would double-announce) and only ever has `.hidden`
+  // toggled; the `span` is the only part `render()` overwrites. Replacing
+  // `status.textContent` wholesale, as before, would wipe the spinner out
+  // on every re-render.
+  const statusSpinner = document.createElement("wuik-spinner");
+  statusSpinner.setAttribute("size", "sm");
+  statusSpinner.className = "stage-file-input__status-spinner";
+  statusSpinner.hidden = true;
+  const statusText = document.createElement("span");
+  status.append(statusSpinner, statusText);
+
   const resetButton = document.createElement("button");
   resetButton.type = "button";
   resetButton.className = "stage-file-input__reset";
@@ -275,7 +288,8 @@ export function renderStageFileInput(
       phase === "loading",
     );
     status.classList.toggle("stage-file-input__status--error", isError);
-    status.textContent = formatStatus(currentStatus);
+    statusSpinner.hidden = phase !== "loading";
+    statusText.textContent = formatStatus(currentStatus);
     resetButton.hidden = phase === "idle" || phase === "loading";
     selectionContainer.hidden = phase !== "needs-selection";
   }

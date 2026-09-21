@@ -199,6 +199,25 @@ describe("renderBackgroundPreview", () => {
     );
   });
 
+  it("shows a spinner alongside the decoding-sprites status, removed once decoding finishes", async () => {
+    const root = document.createElement("div");
+    const stage = stageWith([element()]);
+
+    renderBackgroundPreview(root, stage, new Uint8Array(), {
+      loadSpriteSheet: stubLoadSpriteSheet(oneValidSprite),
+      resolveSpritePixels: stubResolveSpritePixels(onePixelResult),
+    });
+
+    const status = root.querySelector(".background-preview__status");
+    expect(status).not.toBeNull();
+    expect(status?.querySelector("wuik-spinner")).not.toBeNull();
+
+    await vi.waitFor(() => {
+      expect(root.querySelector(".background-preview__row")).not.toBeNull();
+    });
+    expect(root.querySelector(".background-preview__status")).toBeNull();
+  });
+
   it("degrades to showing the list (every reference unresolved) instead of hanging when the WASM module itself fails to start", async () => {
     const root = document.createElement("div");
     const stage = stageWith([element()]);

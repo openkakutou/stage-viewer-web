@@ -11,6 +11,20 @@
 }
 
 /*
+ * `<wuik-spinner>`'s own shadow DOM sets `:host { display: inline-block }`
+ * unconditionally (backlog item 015) — an author-origin rule that takes
+ * priority over the UA stylesheet's `[hidden] { display: none }`, so
+ * toggling the element's `hidden` property alone has no visible effect in
+ * a real browser (confirmed via runtime verification; not caught by this
+ * project's jsdom-based unit tests, which only assert the `.hidden`
+ * property, not actual layout). Restored here rather than in `web-ui-kit`
+ * itself, since this app only consumes it as a published dependency.
+ */
+wuik-spinner[hidden] {
+  display: none !important;
+}
+
+/*
  * Stage file input (backlog item 002). Mirrors `lifebar-viewer-web`'s own
  * folder-input styling — same dropzone/status/reset shape, only the
  * class prefix differs.
@@ -60,6 +74,9 @@
 }
 
 .stage-file-input__status {
+  display: flex;
+  align-items: center;
+  gap: var(--wuik-space-2);
   min-height: 1.2em;
   font-size: var(--wuik-font-size-sm);
   color: var(--wuik-color-text-secondary);
@@ -167,6 +184,9 @@
 }
 
 .background-preview__status {
+  display: flex;
+  align-items: center;
+  gap: var(--wuik-space-2);
   min-height: 1.2em;
   font-size: var(--wuik-font-size-sm);
   color: var(--wuik-color-text-secondary);
@@ -257,6 +277,24 @@
 .model-preview__canvas {
   width: 100%;
   height: 100%;
+}
+
+/*
+ * Loading overlay shown from the moment the 3D viewport mounts until its
+ * first successful render — `pointer-events: none` keeps it from
+ * intercepting orbit/pan/zoom input meant for the canvas underneath.
+ */
+.model-preview__loading {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--wuik-space-2);
+  color: var(--wuik-color-text-secondary);
+  font-size: var(--wuik-font-size-sm);
+  pointer-events: none;
 }
 
 /*

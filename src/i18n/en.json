@@ -53,6 +53,7 @@
     "viewModeGameWindow": "Game window"
   },
   "model": {
+    "loadingPreview": "Loading 3D preview…",
     "unavailableHeading": "3D preview unavailable",
     "modelNotFound": "The referenced 3D model \"{{referencedName}}\" was not found in the loaded folder.",
     "modelAmbiguous": "Multiple files named \"{{referencedName}}\" were found in the loaded folder — could not tell which one to use as the 3D model.",
