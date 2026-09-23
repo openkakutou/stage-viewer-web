@@ -8,6 +8,15 @@ export default defineConfig({
     testDir: "./tests/visual",
     outputDir: "./test-results",
     use: { baseURL: "http://localhost:4173" },
+    // Above the shared preset's implicit 5s default: each spec here loads
+    // two real WASM modules (stage + sff) through the actual folder-picker
+    // input and, for the 3D fixture, decodes/renders a real glTF model —
+    // real work, not a stub. Seen timing out on `.background-preview__stack`
+    // becoming visible under CPU contention (a `toBeVisible()` with nothing
+    // decode-dependent gating it) even though a rerun with no other change
+    // passed comfortably in under 2s — a real margin problem, not a wrong
+    // assertion.
+    expect: { timeout: 15_000 },
   }),
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {

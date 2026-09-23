@@ -70,7 +70,13 @@ Two baselines, from two real, vendored fixture folders (see `tests/visual/fixtur
 - **`dengeki-subway/`** — a real 2D MUGEN stage whose `[StageInfo]` sets `xscale = .35`/`yscale = .35`. This is the exact stage that once exposed the composition bug backlog item 009 fixed (every sprite drawn at its raw, unscaled size); its baseline is the regression guard against that bug recurring. Verified live during this item's own development: temporarily reverting `resolveBgScale`'s effect back to `{1, 1}` made this test fail with 100% of the compared element's pixels different, and restoring the fix made it pass again — confirming the suite actually catches this exact class of regression, not just that it runs.
 - **`cvs2london/`** — a real, MIT-licensed Ikemen GO 3D model-based stage with no 2D BG elements of its own (the 3D model is the entire background), exercising the model-only preview path (backlog item 006) instead.
 
-A failing comparison attaches the actual/expected/diff images to the run (`test-results/`, gitignored). Baselines are only ever regenerated deliberately and reviewed like any other diff — never silently. This suite runs as its own step in `.github/workflows/deploy-pages.yml`, after `Build` and before the Pages deploy steps, on a runner image pinned to `ubuntu-24.04` (not the floating `ubuntu-latest` the rest of this repo's CI otherwise used) — see `.vibe/decisions/009-visual-regression-ci-gating.md` for why a floating image is a real risk once a job carries committed screenshot baselines.
+A failing comparison attaches the actual/expected/diff images to the run (`test-results/`, gitignored). Baselines are only ever regenerated deliberately and reviewed like any other diff — never silently. This suite runs as its own step in `.github/workflows/deploy-pages.yml`, after `Build` and before the Pages deploy steps, inside Playwright's own published Docker image (`mcr.microsoft.com/playwright`, pinned by digest to this repo's exact `@playwright/test` version) rather than a bare pinned-OS runner — see `.vibe/decisions/011-visual-regression-ci-runs-in-playwrights-own-docker-image.md` for why even an OS pin (`.vibe/decisions/009`) wasn't enough. Every baseline must be regenerated through that same image, never a bare local `npm run test:visual:update`:
+
+```sh
+docker run --rm -v "$PWD:/work" -w /work --ipc=host \
+  mcr.microsoft.com/playwright:v1.62.1-noble \
+  bash -c "npm ci && npm run test:visual:update"
+```
 
 ### Why the shared preset
 
