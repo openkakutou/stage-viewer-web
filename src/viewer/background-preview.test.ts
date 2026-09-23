@@ -858,7 +858,7 @@ describe("renderBackgroundPreview — overview-mode canvas sizing (backlog item 
 });
 
 describe("renderBackgroundPreview — missing localcoord fallback (backlog item 016)", () => {
-  function stageWithMissingLocalcoord(elements: BGElement[]): StageData {
+  function stageWithMissingLocalcoord(elements: BGElement[] | null): StageData {
     const stage = stageWith(elements);
     return {
       ...stage,
