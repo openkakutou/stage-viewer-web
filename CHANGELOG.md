@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Moved to the redesigned shared look (web-ui-kit 0.17, "Studio": dark by default, new colour tokens, 14 px text and 34 px controls).
+
 ## [0.13.2] - 2026-09-21
 
 ### Fixed

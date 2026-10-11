@@ -862,7 +862,7 @@ function drawPlaceholder(
 ): void {
   const danger =
     getComputedStyle(ctx.canvas)
-      .getPropertyValue("--wuik-color-danger")
+      .getPropertyValue("--wuik-color-error")
       .trim() || "#c0392b";
   ctx.save();
   ctx.strokeStyle = danger;
@@ -884,7 +884,7 @@ function drawSelectionOutline(
 ): void {
   const accent =
     getComputedStyle(ctx.canvas)
-      .getPropertyValue("--wuik-color-accent")
+      .getPropertyValue("--wuik-color-primary")
       .trim() || "#2d7dd2";
   ctx.save();
   ctx.strokeStyle = accent;

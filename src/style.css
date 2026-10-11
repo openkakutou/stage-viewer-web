@@ -48,7 +48,7 @@ wuik-spinner[hidden] {
 }
 
 .stage-file-input__dropzone--dragging {
-  border-color: var(--wuik-color-accent);
+  border-color: var(--wuik-color-primary);
   background-color: var(--wuik-color-surface);
 }
 
@@ -63,7 +63,7 @@ wuik-spinner[hidden] {
 .stage-file-input__hint {
   margin: 0;
   font-size: var(--wuik-font-size-sm);
-  color: var(--wuik-color-text-secondary);
+  color: var(--wuik-color-text-muted);
 }
 
 .stage-file-input__selection {
@@ -79,13 +79,13 @@ wuik-spinner[hidden] {
   gap: var(--wuik-space-2);
   min-height: 1.2em;
   font-size: var(--wuik-font-size-sm);
-  color: var(--wuik-color-text-secondary);
+  color: var(--wuik-color-text-muted);
 }
 
 .stage-file-input__status--error {
   padding-left: var(--wuik-space-2);
   color: var(--wuik-color-text);
-  border-left: 3px solid var(--wuik-color-danger);
+  border-left: 3px solid var(--wuik-color-error);
 }
 
 .stage-file-input__reset {
@@ -140,7 +140,7 @@ wuik-spinner[hidden] {
 .characteristics-panel__stat dt {
   margin: 0;
   font-size: var(--wuik-font-size-sm);
-  color: var(--wuik-color-text-secondary);
+  color: var(--wuik-color-text-muted);
 }
 
 .characteristics-panel__stat dd {
@@ -152,7 +152,7 @@ wuik-spinner[hidden] {
 .characteristics-panel__dimension {
   margin: var(--wuik-space-2) 0 0;
   font-size: var(--wuik-font-size-sm);
-  color: var(--wuik-color-text-secondary);
+  color: var(--wuik-color-text-muted);
 }
 
 /*
@@ -174,7 +174,7 @@ wuik-spinner[hidden] {
 
 .background-preview__empty {
   margin: var(--wuik-space-4);
-  color: var(--wuik-color-text-secondary);
+  color: var(--wuik-color-text-muted);
 }
 
 .background-preview__list {
@@ -189,7 +189,7 @@ wuik-spinner[hidden] {
   gap: var(--wuik-space-2);
   min-height: 1.2em;
   font-size: var(--wuik-font-size-sm);
-  color: var(--wuik-color-text-secondary);
+  color: var(--wuik-color-text-muted);
 }
 
 .background-preview__rows {
@@ -214,7 +214,7 @@ wuik-spinner[hidden] {
 }
 
 .background-preview__row[aria-current="true"] {
-  border-color: var(--wuik-color-accent);
+  border-color: var(--wuik-color-primary);
 }
 
 /*
@@ -261,7 +261,7 @@ wuik-spinner[hidden] {
   margin: 0;
   padding: var(--wuik-space-1) var(--wuik-space-2);
   background: var(--wuik-color-surface);
-  color: var(--wuik-color-text-secondary);
+  color: var(--wuik-color-text-muted);
   font-size: var(--wuik-font-size-xs);
   border: 1px solid var(--wuik-color-border);
   border-radius: var(--wuik-space-1);
@@ -292,14 +292,14 @@ wuik-spinner[hidden] {
   align-items: center;
   justify-content: center;
   gap: var(--wuik-space-2);
-  color: var(--wuik-color-text-secondary);
+  color: var(--wuik-color-text-muted);
   font-size: var(--wuik-font-size-sm);
   pointer-events: none;
 }
 
 /*
  * Danger signals non-verbally via the border only, never as text color —
- * --wuik-color-danger falls short of WCAG AA as foreground-on-surface text
+ * --wuik-color-error falls short of WCAG AA as foreground-on-surface text
  * (see web-ui-kit's own .vibe/decisions/009); both heading and body stay
  * on the standard high-contrast text tokens.
  */
@@ -313,7 +313,7 @@ wuik-spinner[hidden] {
   gap: var(--wuik-space-2);
   padding: var(--wuik-space-4);
   background: var(--wuik-color-surface);
-  border: 1px solid var(--wuik-color-danger);
+  border: 1px solid var(--wuik-color-error);
   text-align: center;
   box-sizing: border-box;
 }
@@ -329,5 +329,5 @@ wuik-spinner[hidden] {
   margin: 0;
   max-width: 42ch;
   font-size: var(--wuik-font-size-sm);
-  color: var(--wuik-color-text-secondary);
+  color: var(--wuik-color-text-muted);
 }
