@@ -66,6 +66,7 @@ describe("loadStage", () => {
       sprite: { group: 1, image: 0 },
       actionNumber: 0,
       layerNo: 0,
+      id: 0,
       startX: 10,
       startY: 20,
       deltaX: 0.5,

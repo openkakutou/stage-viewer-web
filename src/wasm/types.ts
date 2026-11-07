@@ -67,6 +67,8 @@ export interface BGElement {
   actionNumber: number;
   /** Draw order relative to characters: 0 behind, 1 in front. */
   layerNo: number;
+  /** `id` key: the identifier BG controllers target; 0 when absent. */
+  id?: number;
   startX: number;
   startY: number;
   deltaX: number;
