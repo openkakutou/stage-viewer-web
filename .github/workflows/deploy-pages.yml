@@ -65,7 +65,7 @@ jobs:
       # above; bumped as a follow-up of sff's own /vibe:release. See
       # .vibe/decisions/003-background-preview-composition-and-coordinate-mapping.md.
       - name: Download sff WASM release
-        run: npm run wasm:download:sff -- v0.4.0
+        run: npm run wasm:download:sff -- v0.5.0
 
       - name: Test
         run: npm test
