@@ -34,7 +34,7 @@ npm run wasm:download -- v0.16.0
 Download a specific version of the `sff` library's WebAssembly build (needed to draw the background preview):
 
 ```sh
-npm run wasm:download:sff -- v0.5.2
+npm run wasm:download:sff -- v0.8.0
 ```
 <!-- vibe:end:install -->
 
