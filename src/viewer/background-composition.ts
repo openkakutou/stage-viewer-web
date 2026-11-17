@@ -109,7 +109,7 @@ export function resolveParallaxPosition(
   return { x: startX + cameraX * deltaX, y: startY + cameraY * deltaY };
 }
 
-/** How many simulated MUGEN ticks the playback clock advances per real second — matches the org-wide ~60fps convention (see `mode-quick-versus`'s own frame-budget docs) `.air`/`[Begin Action N]` frame `Time` values are authored against. */
+/** How many simulated MUGEN ticks the playback clock advances per real second — matches the org-wide ~60fps convention (see `game`'s own frame-budget docs) `.air`/`[Begin Action N]` frame `Time` values are authored against. */
 export const TICK_RATE_HZ = 60;
 
 /**
